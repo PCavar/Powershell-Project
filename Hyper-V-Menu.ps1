@@ -142,8 +142,6 @@ function New-DCMENU
     Write-Host "3: Turnoff a DC"
     Write-Host "4: Remove a DC"
     Write-Host "5: Provision a new DC"
-    Write-Host "6: Install AD/DS Roles on DC"
-    Write-Host "7: Configure IP/DNS/Gateway"
 }
 
 ## Virtual Machines Main Menu
@@ -163,8 +161,29 @@ function New-VMMENU
      Write-Host "6. Add VM to Domain"
  }
 
+ function NEW-DCConfigurationsMenu {
+    param (
+        [string]$TitleVM = 'Configure Windows Server/DC'
+    )
+    Clear-Host
+    Write-Host "================ $TitleVM ================"
+    
+    Write-Host "1: Configure IP/DNS/Gateway"
+    Write-Host "2: Install AD/DS Roles on DC"
+ }
+
 function New-AddVMToDomain {
     Invoke-Command -VMName $addComputerVMToDomain -Credential (Get-Credential) -ScriptBlock {
+        ##This disables IPV6 
+        Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
+        Start-Sleep -Seconds 3
+        
+        Set-DnsClientServerAddress `
+        -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex `
+        -ServerAddresses $Using:setDNSVMBeforeJoiningDomain -Verbose
+
+        Start-Sleep -Seconds 3
+
         Add-Computer -DomainName $Using:domainNameToJoin
         Restart-Computer -Force
     }
@@ -174,6 +193,7 @@ do {
     Write-Host "================ Provision Domain Controllers or VMs ==============="
     Write-Host "1: Domain Controllers Menu"
     Write-Host "2: Virtual Machines Menu"
+    Write-Host "3: Configure Domain Services"
     Write-Host "Q: Press Q to exit."
 
     $MainMenu = Read-Host "Choose an entrance Or press Q to quit"
@@ -200,24 +220,6 @@ do {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $choosenDCToProvision = Read-Host "Enter name of the DC you want to provision"
                         New-PCDC -Verbose
-                     } '6' {
-                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                        $choosenDCForADDSInstallation = Read-Host "Enter DC to install AD/DS Services"
-                        Install-PCADDS -Verbose
-                     } '7' {
-                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                        $configureDCNetworkSettings = Read-Host "Enter DC to configure IP/DNS/Gateway"
-                        Write-Host "Example of a configuration"
-                        Write-Host "IPAddress Value: 192.168.10.2"
-                        Write-Host "DefaultGateway Value: 192.168.10.1"
-                        Write-Host "InterfaceAlias Value:" (Get-NetAdapter).InterfaceAlias
-                        Write-Host "PrefixLength Value: 24"
-                        Write-Host "DNS ServerClient Value: 192.168.10.2"
-                        $IPAddressDCConf = Read-Host "Enter Value for IP-Address"
-                        $defaultGatewayDCConf = Read-Host "Enter Value for Gateway/Router"
-                        $preFixLengthDCConf = Read-Host "Enter Value For Prefix length"
-                        $DNSServerClientDCConf = Read-Host "Enter a value for DNS-Address"
-                        New-PCDCNetworkConfiguration
                      }
                 }
                 pause
@@ -247,12 +249,39 @@ do {
                      } '6' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $addComputerVMToDomain = Read-Host "Enter VM you want to add to domain"
-                        $domainNameToJoin = Read-Host "Enter Domainname ex. 'Powershell.local' "
+                        $domainNameToJoin = Read-Host "Enter Domainname ex. 'Powershell.local'"
+                        Write-Host "NOTE, before joining a domain you are required to enter the DNS residing for that domain."
+                        $setDNSVMBeforeJoiningDomain = Read-Host "Please enter the DNS, ex: 192.168.10.2"
                         New-AddVMToDomain
                      }
                  }      
                  pause
             } until ($VMMainMenu -eq 'B')
+        } '3' {
+            do { NEW-DCConfigurationsMenu
+                $WindowsServerADConfigMenu = Read-Host "Choose an entrance or Press B for Back"
+                switch($WindowsServerADConfigMenu) {
+                   '1' {
+                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    $configureDCNetworkSettings = Read-Host "Enter DC to configure IP/DNS/Gateway"
+                    Write-Host "Example of a configuration"
+                    Write-Host "IPAddress Value: 192.168.10.2"
+                    Write-Host "DefaultGateway Value: 192.168.10.1"
+                    Write-Host "InterfaceAlias Value:" (Get-NetAdapter).InterfaceAlias
+                    Write-Host "PrefixLength Value: 24"
+                    Write-Host "DNS ServerClient Value: 192.168.10.2"
+                    $IPAddressDCConf = Read-Host "Enter Value for IP-Address"
+                    $defaultGatewayDCConf = Read-Host "Enter Value for Gateway/Router"
+                    $preFixLengthDCConf = Read-Host "Enter Value For Prefix length"
+                    $DNSServerClientDCConf = Read-Host "Enter a value for DNS-Address"
+                    New-PCDCNetworkConfiguration
+                    } '2' {
+                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    $choosenDCForADDSInstallation = Read-Host "Enter DC to install AD/DS Services"
+                    Install-PCADDS -Verbose
+                    }
+                }      
+            } until ($WindowsServerADConfigMenu -eq 'B')
         }
     }
 } until($MainMenu -eq 'Q')
