@@ -49,16 +49,16 @@ function New-PCVM {
     Start-VM $choosenVMToProvision
 }
 function Remove-PCDC {
-    $pathForDCVirtualMachines = "C:\VM-Sysprep\VM10\Virtual Machines\$removeChoosenDC"
-    $pathForVHDX = "C:\VM-Sysprep\VM10\Virtual Hard Disks\$removeChoosenDC.vhdx"
+    $pathForDCVirtualMachines = "C:\VM-Sysprep\Win2019\Virtual Machines\$removeChoosenDC"
+    $pathForVHDX = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\$removeChoosenDC.vhdx"
 
     Remove-VM $removeChoosenDC
     Remove-Item $pathForVHDX , $pathForDCVirtualMachines
 }
 
 function Remove-PCVM {
-    $pathForVMVirtualMachines = "C:\VM-Sysprep\Win2019\Virtual Machines\$removeChooseVM"
-    $pathForVHDX = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\$removeChoosenVM.vhdx"
+    $pathForVMVirtualMachines = "C:\VM-Sysprep\VM10\Virtual Machines\$removeChooseVM"
+    $pathForVHDX = "C:\VM-Sysprep\VM10\Virtual Hard Disks\$removeChoosenVM.vhdx"
 
     Remove-VM $removeChoosenVM
     Remove-Item $pathForVHDX , $pathForVMVirtualMachines
@@ -160,7 +160,15 @@ function New-VMMENU
      Write-Host "3: Turnoff a VM"
      Write-Host "4: Remove a VM"
      Write-Host "5: Provision a new VM"
+     Write-Host "6. Add VM to Domain"
  }
+
+function New-AddVMToDomain {
+    Invoke-Command -VMName $addComputerVMToDomain -Credential (Get-Credential) -ScriptBlock {
+        Add-Computer -DomainName $Using:domainNameToJoin
+        Restart-Computer -Force
+    }
+}
 
 do {
     Write-Host "================ Provision Domain Controllers or VMs ==============="
@@ -236,6 +244,11 @@ do {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $choosenVMToProvision = Read-Host "Enter name of the VM you want to provision"
                         New-PCVM -Verbose
+                     } '6' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        $addComputerVMToDomain = Read-Host "Enter VM you want to add to domain"
+                        $domainNameToJoin = Read-Host "Enter Domainname ex. 'Powershell.local' "
+                        New-AddVMToDomain
                      }
                  }      
                  pause
