@@ -160,7 +160,7 @@ do {
                      } '3' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $turnOffChoosenDC = Read-Host "What VM would you like to turn off?"
-                        $turnOffChoosenDC | Stop-VM -Verbose
+                        $turnOffChoosenDC | Stop-VM -Verbose -Force
                      } '4' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $removeChoosenDC = Read-Host "What VM would you like to remove?"
@@ -190,7 +190,7 @@ do {
                      } '3' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $turnOffChoosenVM = Read-Host "What VM would you like to turn off?"
-                        $turnOffChoosenVM | Stop-VM -Verbose
+                        $turnOffChoosenVM | Stop-VM -Verbose -Force
                      } '4' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $removeChoosenVM = Read-Host "What VM would you like to remove?"
