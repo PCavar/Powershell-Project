@@ -76,13 +76,13 @@ function Install-PCADDS {
         
             Import-Module ADDSDeployment
         
-            ##installera och konfa AD/DS
+            ##Install and configure AD/DS
             Install-ADDSForest `
             -CreateDnsDelegation:$false `
             -DatabasePath "C:\Windows\NTDS" `
             -DomainMode "WinThreshold" `
-            -DomainName "petcav.online" `
-            -DomainNetbiosName "PETCAV" `
+            -DomainName "powershell.local" `
+            -DomainNetbiosName "POWERSHELL" `
             -ForestMode "WinThreshold" `
             -InstallDns:$true `
             -LogPath "C:\Windows\NTDS" `
@@ -97,15 +97,37 @@ function Install-PCADDS {
 
             Start-Sleep -Seconds 1
             Rename-Computer -NewName $Using:choosenDCForADDSInstallation
-            Start-Sleep -Seconds 2
+            Start-Sleep -Seconds 5
             Restart-Computer -Force
 
         } else {  
-            Write-Verbose "petcav.online already exists!"
+            Write-Verbose "Powershell.local already exists!"
             }
         }
 }
 
+function New-PCDCNetworkConfiguration {
+    Invoke-Command -VMName $configureDCNetworkSettings -Credential (Get-Credential) -ScriptBlock {
+        ##This disables IPV6 
+        Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
+        Start-Sleep -Seconds 5
+
+        New-NetIPAddress `
+         -IPAddress $Using:IPAddressDCConf `
+         -InterfaceAlias (Get-NetAdapter).InterfaceAlias `
+         -DefaultGateway $Using:defaultGatewayDCConf `
+         -PrefixLength $Using:preFixLengthDCConf `
+
+        Start-Sleep -Seconds 2
+
+        Set-DnsClientServerAddress `
+         -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex `
+         -ServerAddresses $Using:DNSServerClientDCConf -Verbose
+
+         Write-Host "Configuration Completed!" -ForegroundColor Cyan
+         Start-Sleep -Seconds 2
+    }
+}
 #Domain Controllers Main Menu
 function New-DCMENU
 {
@@ -121,6 +143,7 @@ function New-DCMENU
     Write-Host "4: Remove a DC"
     Write-Host "5: Provision a new DC"
     Write-Host "6: Install AD/DS Roles on DC"
+    Write-Host "7: Configure IP/DNS/Gateway"
 }
 
 ## Virtual Machines Main Menu
@@ -155,24 +178,38 @@ do {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                      } '2' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                        $choosenDCToStart = Read-Host "What VM would you like to start?"
+                        $choosenDCToStart = Read-Host "Which DC would you like to start?"
                         $choosenDCToStart | Start-VM -Verbose
                      } '3' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                        $turnOffChoosenDC = Read-Host "What VM would you like to turn off?"
+                        $turnOffChoosenDC = Read-Host "Which DC would you like to turn off?"
                         $turnOffChoosenDC | Stop-VM -Verbose -Force
                      } '4' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                        $removeChoosenDC = Read-Host "What VM would you like to remove?"
+                        $removeChoosenDC = Read-Host "Which DC would you like to remove?"
                         Remove-PCDC -Verbose
                      } '5' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                        $choosenDCToProvision = Read-Host "Enter name of the VM you want to provision"
+                        $choosenDCToProvision = Read-Host "Enter name of the DC you want to provision"
                         New-PCDC -Verbose
                      } '6' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                        $choosenDCForADDSInstallation = Read-Host "Enter VM to install AD/DS Services"
+                        $choosenDCForADDSInstallation = Read-Host "Enter DC to install AD/DS Services"
                         Install-PCADDS -Verbose
+                     } '7' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        $configureDCNetworkSettings = Read-Host "Enter DC to configure IP/DNS/Gateway"
+                        Write-Host "Example of a configuration"
+                        Write-Host "IPAddress Value: 192.168.10.2"
+                        Write-Host "DefaultGateway Value: 192.168.10.1"
+                        Write-Host "InterfaceAlias Value:" (Get-NetAdapter).InterfaceAlias
+                        Write-Host "PrefixLength Value: 24"
+                        Write-Host "DNS ServerClient Value: 192.168.10.2"
+                        $IPAddressDCConf = Read-Host "Enter Value for IP-Address"
+                        $defaultGatewayDCConf = Read-Host "Enter Value for Gateway/Router"
+                        $preFixLengthDCConf = Read-Host "Enter Value For Prefix length"
+                        $DNSServerClientDCConf = Read-Host "Enter a value for DNS-Address"
+                        New-PCDCNetworkConfiguration
                      }
                 }
                 pause
