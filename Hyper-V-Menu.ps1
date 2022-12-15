@@ -1,46 +1,45 @@
-$ErrorActionPreference = 'SilentlyContinue'
 
 $VMPath = "C:\VM-Sysprep"
 $ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
 $ClientTemplatePath = "C:\VM-Sysprep\VM10\Virtual Hard Disks\VM10Template.vhdx"
-$VHDPath = "$VMPath\$VMName\$VMName.vhdx"
 
 function New-PCVM {
 
 [CmdletBinding()]
 param (
     [Parameter(Mandatory)]
-    [string[]]$VMName,
+    [string]$VMName,
 
     [Parameter(Mandatory)]
     [ValidateSet("Server","Client")]$MachineType
 )
 
-    if((-not(Get-VM $choosenDCToProvision).Name) -eq $choosenDCToProvision) {
+    if((-not(Get-VM $VMName -ErrorAction SilentlyContinue).Name) -eq $VMName) {
 
-    if ($MachineType -like "Server") {
-        $TemplatePath = $ServerTemplatePath
-    } else {
-        $TemplatePath = $ClientTemplatePath
-    }
+        if ($MachineType -like "Server") {
+            $TemplatePath = $ServerTemplatePath
+        } else {
+            $TemplatePath = $ClientTemplatePath
+        }
 
-    New-VHD -ParentPath "$TemplatePath" -Path ($VHDPath) -Differencing -Verbose
+    $VHDPath = "$VMPath\$VMName\$VMName.vhdx"
+    New-VHD -ParentPath "$TemplatePath" -Path $VHDPath -Differencing -Verbose
     
 	New-VM `
 	-Name $VMName `
+    -Path $VMPath `
 	-MemoryStartupBytes 2GB `
-	-BootDevice VHD `
     -VHDPath $VHDPath `
-	-Path $VMPath\$VMName `
+    -BootDevice VHD `
 	-Generation 2 `
-	-Switch LAN 
+	-Switch pfLAN1
 
     Set-VMProcessor -VMName $VMName -Count 4 -Verbose
 
     Enable-VMIntegrationService -VMName $VMName -Name "Guest Service Interface" -Verbose
     Set-VM -VMName $VMName -AutomaticCheckpointsEnabled $false -Verbose
   
-    Write-Host "VM created" -ForegroundColor Cyan
+    Write-Host "[$($VMName)] created" -ForegroundColor Cyan
     Start-VM $VMName
     } else {
         Write-Host "$VMName already exists!" -ForegroundColor Cyan
@@ -54,24 +53,22 @@ function Remove-PCVM {
     [CmdletBinding()]
     param (
     [Parameter(Mandatory)]
-    [string[]]$VMName
+    [string]$VMName
     )
-    
 
     $VMPath = (get-vm -name $VMName).Path
     $VHDPath = (get-vm -name $VMName).HardDrives.Path
 
-    if(((Get-VM $VMName).State) -eq "Running") {
+    if (!(get-vm $VMName -ErrorAction SilentlyContinue)) {
+        Write-Error "[Virtual Machine $($VMName)] does not exist!"
+    } elseif (((Get-VM $VMName).State) -eq "Running") {
         Write-Host "Shutting down $VMName before deleting" -ForegroundColor Cyan
         Get-VM -Name $VMName | Stop-VM
         Remove-VM $VMName
-        Remove-Item $VHDPath , $VMPath
-    } elseif (((Get-VM $VMName).Name) -eq $true) {
-        Remove-VM $VMName
-        Remove-Item $VHDPath , $VMPath
-        Write-Host "Virtual Machine $VMName removed!" -ForegroundColor Cyan
+        Remove-Item $VHDPath,$VMPath -Force
     } else {
-        Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Cyan
+        Remove-VM $VMName -Confirm:$false -Force -Verbose
+        Remove-Item $VHDPath,$VMPath -Confirm:$false -Force -Verbose
     }
 }
 
