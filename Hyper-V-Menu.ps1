@@ -209,7 +209,7 @@ function New-ProvisioningDCVM
          [string]$TitleVMDCProvisioning = 'Provision VM'
      )
      Clear-Host
-     Write-Host "================ $TitleVM ================"
+     Write-Host "================ $TitleVMDCProvisioning ================"
      
      Write-Host "1: Provision a Windows Server"
      Write-Host "2: Provision a new Client VM"
