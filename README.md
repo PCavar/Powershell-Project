@@ -6,6 +6,8 @@ This script has a Menu for Provisioning Domain Controllers/AD and Virtual Machin
 You can Provision, remove, start,turnoff DC/VM and even install some AD/DS features.(Features that aren't in the code but you want to add them, simlpe!) 
 You can always add and configure it how you like but I find the baseline neat.
 
+To break out of a option, usually it says "Press B for back,if not. You can break out by simple pressing Enter-Key"
+
 NOTE: 3 variables are hardcoded, theese variables represent the path for the sysprep.
     #Path for Windows Server 2019 Sysprep
     $pathForTemplate = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
