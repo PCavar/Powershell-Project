@@ -68,10 +68,12 @@ function Remove-PCDC {
         Get-VM -Name $removeChoosenDC | Stop-VM
         Remove-VM $removeChoosenDC
         Remove-Item $pathForVHDX , $pathForDCVirtualMachines
-    } else {
+    } elseif (((Get-VM $removeChoosenDC).Name) -eq $true) {
         Remove-VM $removeChoosenDC
         Remove-Item $pathForVHDX , $pathForDCVirtualMachines
         Write-Host "Virtual Machine $removeChoosenDC removed!" -ForegroundColor Cyan
+    } else {
+        Write-Host "Virtual Machine $removeChoosenDC does not exist" -ForegroundColor Cyan
     }
 }
 function Remove-PCVM {
@@ -83,47 +85,57 @@ function Remove-PCVM {
         Stop-VM -Name $removeChoosenVM -Force
         Remove-VM $removeChoosenVM -Force
         Remove-Item $pathForVHDX , $pathForVMVirtualMachines -Force -ErrorAction 'Silentlu'
-    } else {
+    } elseif (((Get-VM $removeChoosenVM).Name) -eq $true) {
         Remove-VM $removeChoosenVM -Force
         Remove-Item $pathForVHDX , $pathForVMVirtualMachines -Force
+    } else {
+        Write-Host "Virtual Machine $removeChoosenVM does not exist" -ForegroundColor Cyan
     }
 }
 function New-PCCheckDCStatusOn {
     if(((Get-VM $choosenDCToStart).State) -eq "Running") {
         Write-Host "$choosenDCToStart is already Turned on and Running" -ForegroundColor Cyan
-    } else {
+    } elseif (((Get-VM $choosenDCToStart).name) -eq $true){
         Write-Host "Starting $choosenDCToStart" -ForegroundColor Cyan
         Get-VM $choosenDCToStart | Start-VM
         Write-Host "$choosenDCToStart is now up and Running!" -ForegroundColor Cyan
+    } else {
+        Write-Host "Virtual Machine $choosenDCToStart does not exist" -ForegroundColor Cyan
     }
 }
 function New-PCCheckVMStatusOn {
     if(((Get-VM $choosenVMtoStart).State) -eq "Running") {
         Write-Host "$choosenVMtoStart is already Turned on and Running" -ForegroundColor Cyan
-    } else {
+    } elseif (((Get-VM $choosenVMtoStart).Name) -eq $true) {
         Write-Host "Starting $choosenVMtoStart" -ForegroundColor Cyan
         Get-VM -Name $choosenVMtoStart | Start-VM
         Write-Host "$choosenVMtoStart is now up and Running!" -ForegroundColor Cyan
+    } else {
+        Write-Host "Virtual Machine $choosenVMtoStart does not exist" -ForegroundColor
     }
 }
 function New-PCCheckDCStatusOff {
     if(((Get-VM $turnOffChoosenDC).State) -eq "Off") {
         Write-Host "$turnOffChoosenDC is already turned Off" -ForegroundColor Cyan
-    } else {
+    } elseif (((Get-VM $turnOffChoosenDC).Name) -eq $true) {
         Write-Host "Shutting down $turnOffChoosenDC" -ForegroundColor Cyan
         Start-Sleep -Seconds 1
         Get-VM -Name $turnOffChoosenDC | Stop-VM
         Write-Host "$turnOffChoosenDC is now turned Off" -ForegroundColor Cyan
+    } else {
+        Write-Host "Virtual Machine $turnOffChoosenDC does not exist" -ForegroundColor Cyan
     }
 }
 function New-PCCheckVMStatusOff {
     if(((Get-VM $turnOffChoosenVM).State) -eq "Off") {
         Write-Host "$turnOffChoosenVM is already turned Off" -ForegroundColor Cyan
-    } else {
+    } elseif (((Get-VM $turnOffChoosenVM).Name) -eq $true) {
         Write-Host "Shutting down $turnOffChoosenVM" -ForegroundColor Cyan
         Start-Sleep -Seconds 1
         Get-VM -Name $turnOffChoosenVM | Stop-VM
         Write-Host "$turnOffChoosenVM is now turned Off" -ForegroundColor Cyan
+    } else {
+        Write-Host "Virtual Machine $turnOffChoosenVM does not exist" -ForegroundColor Cyan
     }
 }
 
@@ -214,6 +226,17 @@ function New-ProvisioningDCVM
      Write-Host "1: Provision a Windows Server"
      Write-Host "2: Provision a new Client VM"
  }
+ function New-RemoveVMMenuPC
+ { 
+     param (
+         [string]$removeDCMachinePC = 'Remove VM '
+     )
+     Clear-Host
+     Write-Host "================ $removeDCMachinePC ================"
+     
+     Write-Host "1: Remove a Windows Server VM"
+     Write-Host "2: Remove a Windows 10 VM"
+ }
 
  function NEW-DCConfigurationsMenu {
     param (
@@ -226,7 +249,6 @@ function New-ProvisioningDCVM
     Write-Host "2: Install AD/DS Roles on Windows Server"
     Write-Host "3: Configure DHCP on Windows Server"
  }
-
 function New-AddVMToDomain {
     Invoke-Command -VMName $addComputerVMToDomain -Credential (Get-Credential) -ScriptBlock {
         ##This disables IPV6 
@@ -264,9 +286,22 @@ do {
                         $turnOffChoosenDC = Read-Host "Which VM would you like to turn off?"
                         New-PCCheckDCStatusOff
                      } '4' {
-                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                        $removeChoosenDC = Read-Host "Which VM would you like to remove?"
-                        Remove-PCDC -Verbose
+                        do{
+                            New-RemoveVMMenuPC
+                            $removeDCVMProvision = Read-Host "Choose an entrance or Press B for Back"
+                            switch($removeDCVMProvision) {
+                                '1' {
+                                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                                    $removeChoosenDC = Read-Host "Which Windows Server would you like to remove?"
+                                    Remove-PCDC -Verbose
+                                } '2' {
+                                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                                    $removeChoosenVM = Read-Host "Which Windows Client would you like to remove?"
+                                    Remove-PCVM -Verbose
+                                }
+                            }
+                            pause
+                        } until ($removeDCVMProvision -eq 'B')
                      } '5' {
                         do { New-ProvisioningDCVM
                             $DCVMProvision = Read-Host "Choose an entrance or Press B for Back"
