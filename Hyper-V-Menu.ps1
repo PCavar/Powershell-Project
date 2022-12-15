@@ -1,9 +1,9 @@
 function New-PCDC {
-    $pathForTemplate = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
+    $pathForDCTemplate = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
     $pathForDCVirtualMachines = "C:\VM-Sysprep\Win2019\Virtual Machines"
     $pathForVHDX = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\$choosenDCToProvision.vhdx"
 
-    New-VHD -ParentPath "$pathForTemplate" -Path ($pathForVHDX) -Differencing -Verbose
+    New-VHD -ParentPath "$pathForDCTemplate" -Path ($pathForVHDX) -Differencing -Verbose
     
 	New-VM `
 	-Name $choosenDCToProvision `
@@ -21,6 +21,13 @@ function New-PCDC {
   
     Write-Host "VM created" -ForegroundColor Cyan
     Start-VM $choosenDCToProvision
+
+    Invoke-Command -VMName $choosenDCToProvision -Credential $choosenDCToProvision\Administrator -ScriptBlock {
+        Start-Sleep -Seconds 15
+        Rename-Computer -NewName $Using:choosenDCToProvision
+        Start-Sleep -Seconds 3
+        Restart-Computer -Force
+    }
 }
 
 function New-PCVM {
@@ -47,22 +54,82 @@ function New-PCVM {
   
     Write-Host "VM created" -ForegroundColor Cyan
     Start-VM $choosenVMToProvision
+
+    Invoke-Command -VMName $choosenVMToProvision -Credential $choosenVMToProvision\Administrator -ScriptBlock {
+        Start-Sleep -Seconds 15
+        Rename-Computer -NewName $Using:choosenVMToProvision
+        Start-Sleep -Seconds 3
+        Restart-Computer -Force
+    }
 }
 function Remove-PCDC {
     $pathForDCVirtualMachines = "C:\VM-Sysprep\Win2019\Virtual Machines\$removeChoosenDC"
     $pathForVHDX = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\$removeChoosenDC.vhdx"
 
-    Remove-VM $removeChoosenDC
-    Remove-Item $pathForVHDX , $pathForDCVirtualMachines
+    if(((Get-VM $removeChoosenDC).State) -eq "Running") {
+        Write-Host "Shutting down $removeChoosenDC before deleting" -ForegroundColor Cyan
+        Get-VM -Name $removeChoosenDC | Stop-VM
+        Remove-VM $removeChoosenDC
+        Remove-Item $pathForVHDX , $pathForDCVirtualMachines
+    } else {
+        Remove-VM $removeChoosenDC
+        Remove-Item $pathForVHDX , $pathForDCVirtualMachines
+        Write-Host "Virtual Machine $removeChoosenDC removed!" -ForegroundColor Cyan
+    }
 }
-
 function Remove-PCVM {
-    $pathForVMVirtualMachines = "C:\VM-Sysprep\VM10\Virtual Machines\$removeChooseVM"
+    $pathForVMVirtualMachines = "C:\VM-Sysprep\VM10\Virtual Machines\$removeChoosenVM"
     $pathForVHDX = "C:\VM-Sysprep\VM10\Virtual Hard Disks\$removeChoosenVM.vhdx"
 
-    Remove-VM $removeChoosenVM
-    Remove-Item $pathForVHDX , $pathForVMVirtualMachines
+    if(((Get-VM $removeChoosenVM).State) -eq "Running") {
+        Write-Host "Shutting down $removeChoosenVM before deleting" -ForegroundColor Cyan
+        Stop-VM -Name $removeChoosenVM -Force
+        Remove-VM $removeChoosenVM -Force
+        Remove-Item $pathForVHDX , $pathForVMVirtualMachines -Force
+    } else {
+        Remove-VM $removeChoosenVM -Force
+        Remove-Item $pathForVHDX , $pathForVMVirtualMachines -Force
+    }
 }
+function New-PCCheckDCStatusOn {
+    if(((Get-VM $choosenDCToStart).State) -eq "Running") {
+        Write-Host "$choosenDCToStart is already Turned on and Running" -ForegroundColor Cyan
+    } else {
+        Write-Host "Starting $choosenDCToStart" -ForegroundColor Cyan
+        Get-VM $choosenDCToStart | Start-VM
+        Write-Host "$choosenDCToStart is now up and Running!" -ForegroundColor Cyan
+    }
+}
+function New-PCCheckVMStatusOn {
+    if(((Get-VM $choosenVMtoStart).State) -eq "Running") {
+        Write-Host "$choosenVMtoStart is already Turned on and Running" -ForegroundColor Cyan
+    } else {
+        Write-Host "Starting $choosenVMtoStart" -ForegroundColor Cyan
+        Get-VM -Name $choosenVMtoStart | Start-VM
+        Write-Host "$choosenVMtoStart is now up and Running!" -ForegroundColor Cyan
+    }
+}
+function New-PCCheckDCStatusOff {
+    if(((Get-VM $turnOffChoosenDC).State) -eq "Off") {
+        Write-Host "$turnOffChoosenDC is already turned Off" -ForegroundColor Cyan
+    } else {
+        Write-Host "Shutting down $turnOffChoosenDC" -ForegroundColor Cyan
+        Start-Sleep -Seconds 1
+        Get-VM -Name $turnOffChoosenDC | Stop-VM
+        Write-Host "$turnOffChoosenDC is now turned Off" -ForegroundColor Cyan
+    }
+}
+function New-PCCheckVMStatusOff {
+    if(((Get-VM $turnOffChoosenVM).State) -eq "Off") {
+        Write-Host "$turnOffChoosenVM is already turned Off" -ForegroundColor Cyan
+    } else {
+        Write-Host "Shutting down $turnOffChoosenVM" -ForegroundColor Cyan
+        Start-Sleep -Seconds 1
+        Get-VM -Name $turnOffChoosenVM | Stop-VM
+        Write-Host "$turnOffChoosenVM is now turned Off" -ForegroundColor Cyan
+    }
+}
+
 function Install-PCADDS {
     Invoke-Command -VMName $choosenDCForADDSInstallation -Credential $choosenDCForADDSInstallation\Administrator -ScriptBlock {
         $passwordForAdminDNS = "RandomPassword123"
@@ -91,12 +158,10 @@ function Install-PCADDS {
             -NoRebootOnCompletion:$false `
             -Force:$true
             
-            Write-Verbose "Configuration Succeded!"
-            Write-Verbose "Applying settings..."
-            Write-Verbose "Successfully Configured AD Services"
+            Write-Verbose "Configuration Succeded!" -ForegroundColor Cyan
+            Write-Verbose "Applying settings..." -ForegroundColor Cyan
+            Write-Verbose "Successfully Configured AD Services" -ForegroundColor Cyan
 
-            Start-Sleep -Seconds 1
-            Rename-Computer -NewName $Using:choosenDCForADDSInstallation
             Start-Sleep -Seconds 5
             Restart-Computer -Force
 
@@ -105,7 +170,6 @@ function Install-PCADDS {
             }
         }
 }
-
 function New-PCDCNetworkConfiguration {
     Invoke-Command -VMName $configureDCNetworkSettings -Credential (Get-Credential) -ScriptBlock {
         ##This disables IPV6 
@@ -120,12 +184,10 @@ function New-PCDCNetworkConfiguration {
 
         Start-Sleep -Seconds 2
 
-        Set-DnsClientServerAddress `
-         -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex `
-         -ServerAddresses $Using:DNSServerClientDCConf -Verbose
-
-         Write-Host "Configuration Completed!" -ForegroundColor Cyan
-         Start-Sleep -Seconds 2
+        Set-DnsClientServerAddress -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex -ServerAddresses $Using:DNSServerClientDCConf
+        
+        Write-Host "Configuration Completed!" -ForegroundColor Cyan
+        Start-Sleep -Seconds 2
     }
 }
 #Domain Controllers Main Menu
@@ -178,10 +240,7 @@ function New-AddVMToDomain {
         Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
         Start-Sleep -Seconds 3
         
-        Set-DnsClientServerAddress `
-        -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex `
-        -ServerAddresses $Using:setDNSVMBeforeJoiningDomain -Verbose
-
+        Set-DnsClientServerAddress -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex -ServerAddresses $Using:setDNSVMBeforeJoiningDomain
         Start-Sleep -Seconds 3
 
         Add-Computer -DomainName $Using:domainNameToJoin
@@ -207,11 +266,11 @@ do {
                      } '2' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $choosenDCToStart = Read-Host "Which DC would you like to start?"
-                        $choosenDCToStart | Start-VM -Verbose
+                        New-PCCheckDCStatusOn
                      } '3' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $turnOffChoosenDC = Read-Host "Which DC would you like to turn off?"
-                        $turnOffChoosenDC | Stop-VM -Verbose -Force
+                        New-PCCheckDCStatusOff
                      } '4' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $removeChoosenDC = Read-Host "Which DC would you like to remove?"
@@ -233,11 +292,11 @@ do {
                      } '2' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $choosenVMtoStart = Read-Host "What VM would you like to start?"
-                        $choosenVMtoStart | Start-VM -Verbose
+                        New-PCCheckVMStatusOn
                      } '3' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $turnOffChoosenVM = Read-Host "What VM would you like to turn off?"
-                        $turnOffChoosenVM | Stop-VM -Verbose -Force
+                        New-PCCheckVMStatusOff
                      } '4' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $removeChoosenVM = Read-Host "What VM would you like to remove?"
