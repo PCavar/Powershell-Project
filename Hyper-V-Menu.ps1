@@ -1,97 +1,81 @@
 $ErrorActionPreference = 'SilentlyContinue'
 
-function New-PCDC {
-
-    if((-not(Get-VM $choosenDCToProvision).Name) -eq $choosenDCToProvision) {
-    $pathForDCTemplate = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
-    $pathForDCVirtualMachines = "C:\VM-Sysprep\Win2019\Virtual Machines"
-    $pathForVHDX = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\$choosenDCToProvision.vhdx"
-
-    New-VHD -ParentPath "$pathForDCTemplate" -Path ($pathForVHDX) -Differencing -Verbose
-    
-	New-VM `
-	-Name $choosenDCToProvision `
-	-MemoryStartupBytes 2GB `
-	-BootDevice VHD `
-    -VHDPath $pathForVHDX `
-	-Path $pathForDCVirtualMachines `
-	-Generation 2 `
-	-Switch LAN 
-
-    Set-VMProcessor -VMName $choosenDCToProvision -Count 4 -Verbose
-
-    Enable-VMIntegrationService -VMName $choosenDCToProvision -Name "Guest Service Interface" -Verbose
-    Set-VM -VMName $choosenDCToProvision -AutomaticCheckpointsEnabled $false -Verbose
-  
-    Write-Host "VM created" -ForegroundColor Cyan
-    Start-VM $choosenDCToProvision
-    } else {
-        Write-Host "$choosenDCToProvision already exists!" -ForegroundColor Cyan
-    }
-}
+$VMPath = "C:\VM-Sysprep"
+$ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
+$ClientTemplatePath = "C:\VM-Sysprep\VM10\Virtual Hard Disks\VM10Template.vhdx"
+$VHDPath = "$VMPath\$VMName\$VMName.vhdx"
 
 function New-PCVM {
 
-    if((-not(Get-VM $choosenVMToProvision).Name) -eq $choosenVMToProvision) {
-    $pathForVMTemplate = "C:\VM-Sysprep\VM10\Virtual Hard Disks\VM10Template.vhdx"
-    $pathForVMVirtualMachines = "C:\VM-Sysprep\VM10\Virtual Machines"
-    $pathForVHDX = "C:\VM-Sysprep\VM10\Virtual Hard Disks\$choosenVMToProvision.vhdx"
+[CmdletBinding()]
+param (
+    [Parameter(Mandatory)]
+    [string[]]$VMName,
 
-    New-VHD -ParentPath "$pathForVMTemplate" -Path ($pathForVHDX) -Differencing -Verbose
+    [Parameter(Mandatory)]
+    [ValidateSet("Server","Client")]$MachineType
+)
+
+    if((-not(Get-VM $choosenDCToProvision).Name) -eq $choosenDCToProvision) {
+
+    if ($MachineType -like "Server") {
+        $TemplatePath = $ServerTemplatePath
+    } else {
+        $TemplatePath = $ClientTemplatePath
+    }
+
+    New-VHD -ParentPath "$TemplatePath" -Path ($VHDPath) -Differencing -Verbose
     
 	New-VM `
-	-Name $choosenVMToProvision `
+	-Name $VMName `
 	-MemoryStartupBytes 2GB `
 	-BootDevice VHD `
-    -VHDPath $pathForVHDX `
-	-Path $pathForVMVirtualMachines `
+    -VHDPath $VHDPath `
+	-Path $VMPath\$VMName `
 	-Generation 2 `
 	-Switch LAN 
 
-    Set-VMProcessor -VMName $choosenVMToProvision -Count 4 -Verbose
+    Set-VMProcessor -VMName $VMName -Count 4 -Verbose
 
-    Enable-VMIntegrationService -VMName $choosenVMToProvision -Name "Guest Service Interface" -Verbose
-    Set-VM -VMName $choosenVMToProvision -AutomaticCheckpointsEnabled $false -Verbose
+    Enable-VMIntegrationService -VMName $VMName -Name "Guest Service Interface" -Verbose
+    Set-VM -VMName $VMName -AutomaticCheckpointsEnabled $false -Verbose
   
     Write-Host "VM created" -ForegroundColor Cyan
-    Start-VM $choosenVMToProvision
-} else {
-    Write-Host "$choosenVMToProvision already exists!" -ForegroundColor Cyan
-}
-}
-function Remove-PCDC {
-    $pathForDCVirtualMachines = "C:\VM-Sysprep\Win2019\Virtual Machines\$removeChoosenDC"
-    $pathForVHDX = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\$removeChoosenDC.vhdx"
-
-    if(((Get-VM $removeChoosenDC).State) -eq "Running") {
-        Write-Host "Shutting down $removeChoosenDC before deleting" -ForegroundColor Cyan
-        Get-VM -Name $removeChoosenDC | Stop-VM
-        Remove-VM $removeChoosenDC
-        Remove-Item $pathForVHDX , $pathForDCVirtualMachines
-    } elseif (((Get-VM $removeChoosenDC).Name) -eq $true) {
-        Remove-VM $removeChoosenDC
-        Remove-Item $pathForVHDX , $pathForDCVirtualMachines
-        Write-Host "Virtual Machine $removeChoosenDC removed!" -ForegroundColor Cyan
+    Start-VM $VMName
     } else {
-        Write-Host "Virtual Machine $removeChoosenDC does not exist" -ForegroundColor Cyan
+        Write-Host "$VMName already exists!" -ForegroundColor Cyan
     }
 }
+
+
+
 function Remove-PCVM {
-    $pathForVMVirtualMachines = "C:\VM-Sysprep\VM10\Virtual Machines\$removeChoosenVM"
-    $pathForVHDX = "C:\VM-Sysprep\VM10\Virtual Hard Disks\$removeChoosenVM.vhdx"
 
-    if(((Get-VM $removeChoosenVM).State) -eq "Running") {
-        Write-Host "Shutting down $removeChoosenVM before deleting" -ForegroundColor Cyan
-        Stop-VM -Name $removeChoosenVM -Force
-        Remove-VM $removeChoosenVM -Force
-        Remove-Item $pathForVHDX , $pathForVMVirtualMachines -Force -ErrorAction 'Silentlu'
-    } elseif (((Get-VM $removeChoosenVM).Name) -eq $true) {
-        Remove-VM $removeChoosenVM -Force
-        Remove-Item $pathForVHDX , $pathForVMVirtualMachines -Force
+    [CmdletBinding()]
+    param (
+    [Parameter(Mandatory)]
+    [string[]]$VMName
+    )
+    
+
+    $VMPath = (get-vm -name $VMName).Path
+    $VHDPath = (get-vm -name $VMName).HardDrives.Path
+
+    if(((Get-VM $VMName).State) -eq "Running") {
+        Write-Host "Shutting down $VMName before deleting" -ForegroundColor Cyan
+        Get-VM -Name $VMName | Stop-VM
+        Remove-VM $VMName
+        Remove-Item $VHDPath , $VMPath
+    } elseif (((Get-VM $VMName).Name) -eq $true) {
+        Remove-VM $VMName
+        Remove-Item $VHDPath , $VMPath
+        Write-Host "Virtual Machine $VMName removed!" -ForegroundColor Cyan
     } else {
-        Write-Host "Virtual Machine $removeChoosenVM does not exist" -ForegroundColor Cyan
+        Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Cyan
     }
 }
+
+
 function New-PCCheckDCStatusOn {
     if(((Get-VM $choosenDCToStart).State) -eq "Running") {
         Write-Host "$choosenDCToStart is already Turned on and Running" -ForegroundColor Cyan
@@ -292,12 +276,12 @@ do {
                             switch($removeDCVMProvision) {
                                 '1' {
                                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                                    $removeChoosenDC = Read-Host "Which Windows Server would you like to remove?"
-                                    Remove-PCDC -Verbose
+                                    $VMName = Read-Host "Which Windows Server would you like to remove?"
+                                    Remove-PCVM -VMName $VMName  -Verbose
                                 } '2' {
                                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                                    $removeChoosenVM = Read-Host "Which Windows Client would you like to remove?"
-                                    Remove-PCVM -Verbose
+                                    $VMName = Read-Host "Which Windows Client would you like to remove?"
+                                    Remove-PCVM -VMName $VMName  -Verbose
                                 }
                             }
                             pause
@@ -308,14 +292,14 @@ do {
                             switch($DCVMProvision) {
                                '1' {
                                 Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                                $choosenDCToProvision = Read-Host "Enter name of the DC you want to provision"
-                                New-PCDC -Verbose
+                                $VMName = Read-Host "Enter name of the DC you want to provision"
+                                New-PCVM -VMName $VMName -MachineType Server
                                 } '2' {
                                 Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                                $choosenVMToProvision = Read-Host "Enter name of the VM you want to provision"
-                                New-PCVM -Verbose
+                                $VMName = Read-Host "Enter name of the VM you want to provision"
+                                New-PCVM -VMName $VMName -MachineType Client
                                 }
-                            } 
+                            }
                             pause
                         } until($DCVMProvision -eq 'B')
                      } '6' {
