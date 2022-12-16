@@ -9,19 +9,13 @@ You can always add and configure it how you like but I find the baseline neat.
 To break out of a option, usually it says "Press B for back,if not. You can break out by simple pressing Enter-Key"
 
 NOTE: 3 variables are hardcoded, theese variables represent the path for the sysprep.
-    #Path for Windows Server 2019 Sysprep
-    $pathForTemplate = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
-    $pathForDCVirtualMachines = "C:\VM-Sysprep\Win2019\Virtual Machines"
-    $pathForVHDX = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\$choosenDCToProvision.vhdx"
-
-    #Path for Windows 10 sysprep
-    $pathForVMTemplate = "C:\VM-Sysprep\VM10\Virtual Hard Disks\VM10Template.vhdx"
-    $pathForVMVirtualMachines = "C:\VM-Sysprep\VM10\Virtual Machines"
-    $pathForVHDX = "C:\VM-Sysprep\VM10\Virtual Hard Disks\$choosenVMToProvision.vhdx"
+#$VMPath = "C:\VM-Sysprep"
+#$ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
+#$ClientTemplatePath = "C:\VM-Sysprep\VM10\Virtual Hard Disks\VM10Template.vhdx"
     
-    First one represents where the template(.VHDX) is located for the Cmdlet New-VHD (-ParentPath),(-Differencing).
-    Second one represents where the mapp for the virtual machine will reside.
-    Lastly the third one represents where the copy(.vhdx) from the template will reside.
+First one represents path for the vm folders.
+Second represents parent path where a new copy from the Windows Server template(.VHDX) is made.
+Third represents parent path where a new copy from the Windows 10 template(.VHDX) is made.
 
 Requirements for this to work without any hassle is a SysPrep WS2012-2022 for DC/AD And WindowsPro(Clients) for VMs.(I'm using .VHDX)
 Recommended to use Powershell Core 7.3.0 and higher.

@@ -1,3 +1,4 @@
+$ErrorActionPreference = 'SilentlyContinue'
 
 $VMPath = "C:\VM-Sysprep"
 $ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
@@ -32,7 +33,7 @@ param (
     -VHDPath $VHDPath `
     -BootDevice VHD `
 	-Generation 2 `
-	-Switch pfLAN1
+	-Switch LAN
 
     Set-VMProcessor -VMName $VMName -Count 4 -Verbose
 
@@ -46,10 +47,7 @@ param (
     }
 }
 
-
-
 function Remove-PCVM {
-
     [CmdletBinding()]
     param (
     [Parameter(Mandatory)]
@@ -70,58 +68,34 @@ function Remove-PCVM {
         Remove-VM $VMName -Confirm:$false -Force -Verbose
         Remove-Item $VHDPath,$VMPath -Confirm:$false -Force -Verbose
     }
+    Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Cyan
 }
 
-
-function New-PCCheckDCStatusOn {
-    if(((Get-VM $choosenDCToStart).State) -eq "Running") {
-        Write-Host "$choosenDCToStart is already Turned on and Running" -ForegroundColor Cyan
-    } elseif (((Get-VM $choosenDCToStart).name) -eq $true){
-        Write-Host "Starting $choosenDCToStart" -ForegroundColor Cyan
-        Get-VM $choosenDCToStart | Start-VM
-        Write-Host "$choosenDCToStart is now up and Running!" -ForegroundColor Cyan
-    } else {
-        Write-Host "Virtual Machine $choosenDCToStart does not exist" -ForegroundColor Cyan
-    }
-}
 function New-PCCheckVMStatusOn {
-    if(((Get-VM $choosenVMtoStart).State) -eq "Running") {
-        Write-Host "$choosenVMtoStart is already Turned on and Running" -ForegroundColor Cyan
-    } elseif (((Get-VM $choosenVMtoStart).Name) -eq $true) {
-        Write-Host "Starting $choosenVMtoStart" -ForegroundColor Cyan
-        Get-VM -Name $choosenVMtoStart | Start-VM
-        Write-Host "$choosenVMtoStart is now up and Running!" -ForegroundColor Cyan
+    if(((Get-VM $VMName).State) -eq "Running") {
+        Write-Error "[Virtual Machine $($VMName)] is already Turned on and Running" -ForegroundColor Cyan
+    } elseif (((Get-VM $VMName).name) -eq $true){
+        Write-Host "Starting $VMName" -ForegroundColor Cyan
+        Get-VM $VMName | Start-VM
+        Write-Host "$VMName is now up and Running!" -ForegroundColor Cyan
     } else {
-        Write-Host "Virtual Machine $choosenVMtoStart does not exist" -ForegroundColor
-    }
-}
-function New-PCCheckDCStatusOff {
-    if(((Get-VM $turnOffChoosenDC).State) -eq "Off") {
-        Write-Host "$turnOffChoosenDC is already turned Off" -ForegroundColor Cyan
-    } elseif (((Get-VM $turnOffChoosenDC).Name) -eq $true) {
-        Write-Host "Shutting down $turnOffChoosenDC" -ForegroundColor Cyan
-        Start-Sleep -Seconds 1
-        Get-VM -Name $turnOffChoosenDC | Stop-VM
-        Write-Host "$turnOffChoosenDC is now turned Off" -ForegroundColor Cyan
-    } else {
-        Write-Host "Virtual Machine $turnOffChoosenDC does not exist" -ForegroundColor Cyan
+        Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Cyan
     }
 }
 function New-PCCheckVMStatusOff {
-    if(((Get-VM $turnOffChoosenVM).State) -eq "Off") {
-        Write-Host "$turnOffChoosenVM is already turned Off" -ForegroundColor Cyan
-    } elseif (((Get-VM $turnOffChoosenVM).Name) -eq $true) {
-        Write-Host "Shutting down $turnOffChoosenVM" -ForegroundColor Cyan
+    if(((Get-VM $VMName).State) -eq "Off") {
+        Write-Host "$VMName is already turned Off" -ForegroundColor Cyan
+    } elseif (((Get-VM $VMName).Name) -eq $true) {
+        Write-Host "Shutting down $VMName" -ForegroundColor Cyan
         Start-Sleep -Seconds 1
-        Get-VM -Name $turnOffChoosenVM | Stop-VM
-        Write-Host "$turnOffChoosenVM is now turned Off" -ForegroundColor Cyan
+        Get-VM -Name $VMName | Stop-VM
+        Write-Host "$VMName is now turned Off" -ForegroundColor Cyan
     } else {
-        Write-Host "Virtual Machine $turnOffChoosenVM does not exist" -ForegroundColor Cyan
+        Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Cyan
     }
 }
-
 function Install-PCADDS {
-    Invoke-Command -VMName $choosenDCForADDSInstallation -Credential $choosenDCForADDSInstallation\Administrator -ScriptBlock {
+    Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
         $passwordForAdminDNS = "RandomPassword123"
         
         if($env:COMPUTERNAME -eq $env:USERDOMAIN) {
@@ -180,6 +154,37 @@ function New-PCDCNetworkConfiguration {
         Start-Sleep -Seconds 2
     }
 }
+
+function New-PCConfigureDHCP {
+    Invoke-Command -VMName $vmName -Credential (Get-Credential) {
+        Install-WindowsFeature -Name 'DHCP' -IncludeManagementTools
+        Start-Sleep -Seconds 60
+        Add-DhcpServerv4Scope -Name $Using:NameOfDCHPScope -StartRange $Using:startOfDCHPScope -EndRange $Using:endOfDHCPScope -SubnetMask $Using:subnetmaskDCHPScope
+        Set-DhcpServerV4OptionValue -DnsServer $Using:setDNSDHCP -Router $Using:routerDHCP
+        Set-DhcpServerv4Scope -ScopeId $Using:enterDHCPScopeId -LeaseDuration $Using:leaseDurationDHCP
+        Restart-Service dhcpserver -Force
+        Restart-Computer -Force
+    }
+}
+
+function New-ExampleOfIpDnsRouterConf {
+    Write-Host "Example of a configuration" -ForegroundColor Cyan
+    Write-Host "IPAddress Value: 192.168.10.2" -ForegroundColor Cyan
+    Write-Host "DefaultGateway Value: 192.168.10.1" -ForegroundColor Cyan
+    Write-Host "InterfaceAlias Value:" (Get-NetAdapter).InterfaceAlias -ForegroundColor Cyan
+    Write-Host "PrefixLength Value: 24" -ForegroundColor Cyan
+    Write-Host "DNS ServerClient Value: 192.168.10.2" -ForegroundColor Cyan
+}
+
+function New-ExampleOfDHCPConf {
+    Write-Host "Example of a DHCP-Configuration"
+    Write-Host "-Name 'DHCP' -IncludeManagementTools"
+    Write-Host "Add-DhcpServerv4Scope -Name "DHCP Scope" -StartRange 192.168.10.5"
+    Write-Host "-EndRange 192.168.10.100 -SubnetMask 255.255.255.0"
+    Write-Host "Set-DhcpServerV4OptionValue -DnsServer 192.168.10.2 -Router 192.168.10.1"
+    Write-Host "Set-DhcpServerv4Scope -ScopeId 192.168.10.2 -LeaseDuration 1.00:00:00"
+    Write-Host "Restart-Service dhcpserver"
+}
 #Domain Controllers Main Menu
 function New-DCMENU
 {
@@ -207,18 +212,6 @@ function New-ProvisioningDCVM
      Write-Host "1: Provision a Windows Server"
      Write-Host "2: Provision a new Client VM"
  }
- function New-RemoveVMMenuPC
- { 
-     param (
-         [string]$removeDCMachinePC = 'Remove VM '
-     )
-     Clear-Host
-     Write-Host "================ $removeDCMachinePC ================"
-     
-     Write-Host "1: Remove a Windows Server VM"
-     Write-Host "2: Remove a Windows 10 VM"
- }
-
  function NEW-DCConfigurationsMenu {
     param (
         [string]$TitleDCConfig = 'Configure Windows Server/DC'
@@ -260,29 +253,16 @@ do {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                      } '2' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                        $choosenDCToStart = Read-Host "Which VM would you like to start?"
-                        New-PCCheckDCStatusOn
+                        $VMName = Read-Host "Which VM would you like to start?"
+                        New-PCCheckVMStatusOn
                      } '3' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                        $turnOffChoosenDC = Read-Host "Which VM would you like to turn off?"
-                        New-PCCheckDCStatusOff
-                     } '4' {
-                        do{
-                            New-RemoveVMMenuPC
-                            $removeDCVMProvision = Read-Host "Choose an entrance or Press B for Back"
-                            switch($removeDCVMProvision) {
-                                '1' {
-                                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                                    $VMName = Read-Host "Which Windows Server would you like to remove?"
-                                    Remove-PCVM -VMName $VMName  -Verbose
-                                } '2' {
-                                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                                    $VMName = Read-Host "Which Windows Client would you like to remove?"
-                                    Remove-PCVM -VMName $VMName  -Verbose
-                                }
-                            }
-                            pause
-                        } until ($removeDCVMProvision -eq 'B')
+                        $VMName = Read-Host "Which VM would you like to turn off?"
+                        New-PCCheckVMStatusOff
+                     } '4' {             
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        $VMName = Read-Host "Which Virtual Machine do you want to remove?"
+                        Remove-PCVM -VMName $VMName  -Verbose
                      } '5' {
                         do { New-ProvisioningDCVM
                             $DCVMProvision = Read-Host "Choose an entrance or Press B for Back"
@@ -306,6 +286,7 @@ do {
                         Write-Host "NOTE, before joining a domain you are required to enter the DNS residing for that domain."
                         $setDNSVMBeforeJoiningDomain = Read-Host "Please enter the DNS, ex: 192.168.10.2"
                         New-AddVMToDomain
+                        Write-Host "Press Enter to cancel Option"
                      }
                 }
                 pause
@@ -316,13 +297,8 @@ do {
                 switch($WindowsServerADConfigMenu) {
                    '1' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    New-ExampleOfIpDnsRouterConf
                     $configureDCNetworkSettings = Read-Host "Enter DC to configure IP/DNS/Gateway"
-                    Write-Host "Example of a configuration"
-                    Write-Host "IPAddress Value: 192.168.10.2"
-                    Write-Host "DefaultGateway Value: 192.168.10.1"
-                    Write-Host "InterfaceAlias Value:" (Get-NetAdapter).InterfaceAlias
-                    Write-Host "PrefixLength Value: 24"
-                    Write-Host "DNS ServerClient Value: 192.168.10.2"
                     $IPAddressDCConf = Read-Host "Enter Value for IP-Address"
                     $defaultGatewayDCConf = Read-Host "Enter Value for Gateway/Router"
                     $preFixLengthDCConf = Read-Host "Enter Value For Prefix length"
@@ -330,18 +306,20 @@ do {
                     New-PCDCNetworkConfiguration
                     } '2' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                    $choosenDCForADDSInstallation = Read-Host "Enter DC to install AD/DS Services"
+                    Write-Host "This Option Installes AD/DS on a Windows Server"
+                    $VMName = Read-Host "Enter DC to install AD/DS Services"
                     Install-PCADDS -Verbose
                     } '3' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                    Write-Host "Example of a DHCP-Configuration"
-                    Write-Host "Install-WindowsFeature -Name 'DHCP' -IncludeManagementTools"
-                    Write-Host "Add-DhcpServerv4Scope -Name "DHCP Scope" -StartRange 192.168.10.5"
-                    Write-Host "-EndRange 192.168.10.100 -SubnetMask 255.255.255.0"
-                    Write-Host "Set-DhcpServerV4OptionValue -DnsServer 192.168.10.2 -Router 192.168.10.1"
-                    Write-Host "Set-DhcpServerv4Scope -ScopeId 192.168.10.2 -LeaseDuration 1.00:00:00"
-                    Write-Host "Restart-Service dhcpserver"
-                    Write-Host "Will add this feature soon!"
+                    New-ExampleOfDHCPConf
+                    $NameOfDCHPScope = Read-Host "Name of DCHP-Scope"
+                    [int]$startOfDCHPScope = Read-Host "Start of DHCP-Scope"
+                    [int]$endOfDHCPScope = Read-Host "End of DCHP-Scope"
+                    [int]$subnetmaskDCHPScope = Read-Host "Enter Prefix-length"
+                    [int]$setDNSDHCP = Read-Host "Enter DNS"
+                    [int]$routerDHCP = Read-Host "Enter router IP"
+                    [int]$enterDHCPScopeId = Read-Host "Enter DHCP Scope ID"
+                    [int]$leaseDurationDHCP = Read-Host "Enter DHCP Lease-Duration" 
                     }
                 }
                 pause  
