@@ -235,7 +235,7 @@ function New-AddVMToDomain {
         Rename-Computer -NewName $Usin:addComputerVMToDomain -Force
         Start-Sleep -Seconds 2
 
-        Add-Computer -DomainName $Using:domainNameToJoin
+        Add-Computer -DomainName $Using:domainNameToJoin -Credential (Get-Credential)
         Write-Host "$Using:addComputerVMToDomain successfully joined "
         Restart-Computer -Force
     }
