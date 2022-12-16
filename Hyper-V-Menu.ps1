@@ -223,6 +223,23 @@ function New-ExampleOfDHCPConf {
     Write-Host "Set-DhcpServerv4Scope -ScopeId 192.168.10.2 -LeaseDuration 1.00:00:00"
     Write-Host "Restart-Service dhcpserver"
 }
+function New-AddVMToDomain {
+    Invoke-Command -VMName $addComputerVMToDomain -Credential (Get-Credential) -ScriptBlock {
+        ##This disables IPV6 
+        Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
+        Start-Sleep -Seconds 3
+        
+        Set-DnsClientServerAddress -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex -ServerAddresses $Using:setDNSVMBeforeJoiningDomain
+        Start-Sleep -Seconds 3
+
+        Rename-Computer -NewName $Usin:addComputerVMToDomain -Force
+        Start-Sleep -Seconds 2
+
+        Add-Computer -DomainName $Using:domainNameToJoin
+        Write-Host "$Using:addComputerVMToDomain successfully joined "
+        Restart-Computer -Force
+    }
+}
 #Domain Controllers Main Menu
 function New-DCMENU
 {
@@ -262,20 +279,6 @@ function New-ProvisioningDCVM
     Write-Host "3: Configure DHCP on Windows Server"
     Write-Host "4: Join a Server to existing Domain"
  }
-function New-AddVMToDomain {
-    Invoke-Command -VMName $addComputerVMToDomain -Credential (Get-Credential) -ScriptBlock {
-        ##This disables IPV6 
-        Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
-        Start-Sleep -Seconds 3
-        
-        Set-DnsClientServerAddress -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex -ServerAddresses $Using:setDNSVMBeforeJoiningDomain
-        Start-Sleep -Seconds 3
-
-        Add-Computer -DomainName $Using:domainNameToJoin
-        Restart-Computer -Force
-    }
-}
-
 do {
     Write-Host "================ Main Menu ==============="
     Write-Host "1: Provision/Manage Virtual Machines"
