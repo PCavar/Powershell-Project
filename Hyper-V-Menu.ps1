@@ -239,6 +239,30 @@ function New-AddVMToDomain {
         Restart-Computer -Force
     }
 }
+
+function New-MoveFSMORolesAndDecomissionServer {
+    Write-Host "Enter credentials for Domainname\Administrator" -ForegroundColor Cyan
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+
+    ##move the FSMO-Roles
+    Move-ADDirectoryServerOperationMasterRole `
+    -OperationMasterRole SchemaMaster,DomainNamingMaster,PDCEmulator,RIDMaster,InfrastructureMaster -Identity $Using:MoveFSMORolesTODC
+
+    Write-Host "Enter Credentials for Windows Server example DC01\Administrator" -ForegroundColor Cyan
+    #uninstall ADDSDomaincontroller
+    Uninstall-ADDSDomainController `
+    -Credential (Get-Credential) `
+    -DemoteOperationMasterRole:$true `
+    -IgnoreLastDnsServerForZone:$true `
+    -RemoveDnsDelegation:$false `
+    -LastDomainControllerInDomain:$false `
+    -Force:$true
+
+    #uninstall WindowsFeature
+    Uninstall-WindowsFeature AD-Domain-Services -IncludeManagementTools
+    Restart-Computer -Force 
+    }
+}
 #Domain Controllers Main Menu
 function New-DCMENU
 {
@@ -277,6 +301,7 @@ function New-ProvisioningDCVM
     Write-Host "2: Install AD/DS Roles on Windows Server"
     Write-Host "3: Configure DHCP on Windows Server"
     Write-Host "4: Join a Server to existing Domain"
+    Write-Host "5: Move FSMO-Roles and Decomission Windows Server"
  }
 do {
     Write-Host "================ Main Menu ==============="
@@ -378,8 +403,16 @@ do {
                     $VMName = Read-Host "Enter DC to join Domain"
                     if(Get-VM -Name $VMName) {
                     New-AddDCToExistingDomain
-                    } 
-                    else { 
+                    } else { 
+                    Write-Host "Virtual Machine [$VMName] does not exist" -ForegroundColor Cyan
+                    }
+                    } '5' {
+                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    $VMName = Read-Host "Enter Windows Server DC you want to move FSMO-Roles from and decomission"
+                    $MoveFSMORolesTODC = "Enter target Server To move Roles to"
+                    if(Get-VM -Name $VMName) {
+                    New-MoveFSMORolesAndDecomissionServer
+                    } else {
                     Write-Host "Virtual Machine [$VMName] does not exist" -ForegroundColor Cyan
                     }
                   }
