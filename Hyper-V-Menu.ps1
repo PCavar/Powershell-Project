@@ -159,7 +159,7 @@ function New-PCDCNetworkConfiguration {
         Restart-Computer -Force
     }
 }
-<#
+
 function New-PCConfigureDHCP {
     Invoke-Command -VMName $vmName -Credential (Get-Credential) {
         Install-WindowsFeature -Name 'DHCP' -IncludeManagementTools
@@ -169,7 +169,7 @@ function New-PCConfigureDHCP {
         Set-DhcpServerv4Scope -ScopeId $Using:enterDHCPScopeId -LeaseDuration $Using:leaseDurationDHCP
         Restart-Service dhcpserver -Force
     }   
-} #>
+}
 function New-AddDCToExistingDomain {
 Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
 
@@ -209,7 +209,7 @@ function New-ExampleOfIpDnsRouterConf {
     Write-Host "IPAddress Value: 192.168.10.2" -ForegroundColor Cyan
     Write-Host "DefaultGateway Value: 192.168.10.1" -ForegroundColor Cyan
     Write-Host "InterfaceAlias Value:" (Get-NetAdapter).InterfaceAlias -ForegroundColor Cyan
-    Write-Host "PrefixLength Value: 24" -ForegroundColor Cyan
+    Write-Host "PrefixLength/Subnet Value: 255.255.255.0" -ForegroundColor Cyan
     Write-Host "DNS ServerClient Value: 192.168.10.2" -ForegroundColor Cyan
 }
 
@@ -354,12 +354,12 @@ do {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     New-ExampleOfDHCPConf
                     Write-Host "Comming soon"
-                    <#$VMName = Read-Host "Enter DC to Configure DHCP-Scope"
+                    $VMName = Read-Host "Enter DC to Configure DHCP-Scope"
                     if(Get-VM -Name $VMName) {
                     $NameOfDCHPScope = Read-Host "Name of DCHP-Scope"
                     $startOfDCHPScope = Read-Host "Start of DHCP-Scope"
                     $endOfDHCPScope = Read-Host "End of DCHP-Scope"
-                    $subnetmaskDCHPScope = Read-Host "Enter Prefix-length"
+                    $subnetmaskDCHPScope = Read-Host "Enter SubnetMask"
                     $setDNSDHCP = Read-Host "Enter DNS"
                     $routerDHCP = Read-Host "Enter router IP"
                     $enterDHCPScopeId = Read-Host "Enter DHCP Scope ID"
@@ -367,7 +367,7 @@ do {
                     New-PCConfigureDHCP
                     } else {
                     Write-Host "Virtual Machine [$VMName] does not exist" -ForegroundColor Cyan
-                    } #>
+                    }
                     } '4' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     $VMName = Read-Host "Enter DC to join Domain"
