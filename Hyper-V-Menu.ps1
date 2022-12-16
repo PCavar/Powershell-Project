@@ -322,7 +322,8 @@ do {
                     [int]$setDNSDHCP = Read-Host "Enter DNS"
                     [int]$routerDHCP = Read-Host "Enter router IP"
                     [int]$enterDHCPScopeId = Read-Host "Enter DHCP Scope ID"
-                    [int]$leaseDurationDHCP = Read-Host "Enter DHCP Lease-Duration" 
+                    [int]$leaseDurationDHCP = Read-Host "Enter DHCP Lease-Duration"
+                    New-PCConfigureDHCP
                     }
                 }
                 pause  
