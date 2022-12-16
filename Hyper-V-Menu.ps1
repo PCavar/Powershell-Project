@@ -214,16 +214,15 @@ function New-ExampleOfIpDnsRouterConf {
 }
 
 function New-ExampleOfDHCPConf {
-    Write-Host "Example of a DHCP-Configuration"
-    Write-Host "-Name 'DHCP' -IncludeManagementTools"
-    Write-Host "Add-DhcpServerv4Scope -Name DHCP Scope -StartRange 192.168.10.5"
-    Write-Host "-EndRange 192.168.10.100 -SubnetMask 255.255.255.0"
-    Write-Host "Set-DhcpServerV4OptionValue -DnsServer 192.168.10.2 -Router 192.168.10.1"
-    Write-Host "Set-DhcpServerv4Scope -ScopeId 192.168.10.2 -LeaseDuration 1.00:00:00"
-    Write-Host "Restart-Service dhcpserver"
+    Write-Host "Example of a DHCP-Configuration" -ForegroundColor Cyan
+    Write-Host "-Name 'DHCP' -IncludeManagementTools" -ForegroundColor Cyan
+    Write-Host "Add-DhcpServerv4Scope -Name DHCP Scope -StartRange 192.168.10.5" -ForegroundColor Cyan
+    Write-Host "-EndRange 192.168.10.100 -SubnetMask 255.255.255.0" -ForegroundColor Cyan
+    Write-Host "Set-DhcpServerV4OptionValue -DnsServer 192.168.10.2 -Router 192.168.10.1" -ForegroundColor Cyan
+    Write-Host "Set-DhcpServerv4Scope -ScopeId 192.168.10.2 -LeaseDuration 1.00:00:00" -ForegroundColor Cyan
 }
 function New-AddVMToDomain {
-    Invoke-Command -VMName $addComputerVMToDomain -Credential (Get-Credential) -ScriptBlock {
+    Invoke-Command -VMName $addComputerVMToDomain -Credential $addComputerVMToDomain\Administrator -ScriptBlock {
         ##This disables IPV6 
         Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
         Start-Sleep -Seconds 3
@@ -234,8 +233,9 @@ function New-AddVMToDomain {
         Rename-Computer -NewName $Using:addComputerVMToDomain -Force
         Start-Sleep -Seconds 2
 
+        Write-Host "Please enter credentials for Domainname\Administrator" -ForegroundColor Cyan
         Add-Computer -DomainName $Using:domainNameToJoin -Credential (Get-Credential)
-        Write-Host "$Using:addComputerVMToDomain successfully joined "
+        Write-Host "$Using:addComputerVMToDomain successfully joined " -ForegroundColor Cyan
         Restart-Computer -Force
     }
 }
@@ -323,11 +323,16 @@ do {
                      } '6' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         $addComputerVMToDomain = Read-Host "Enter VM you want to add to domain"
+                        if(Get-VM -Name $addComputerVMToDomain) {
                         $domainNameToJoin = Read-Host "Enter Domainname ex. 'Powershell.local'"
-                        Write-Host "NOTE, before joining a domain you are required to enter the DNS residing for that domain."
+                        Write-Host "NOTE, before joining a domain you are required to enter the DNS residing for that domain." -ForegroundColor Cyan
                         $setDNSVMBeforeJoiningDomain = Read-Host "Please enter the DNS, ex: 192.168.10.2"
                         New-AddVMToDomain
                         Write-Host "Press Enter to cancel Option"
+                        } 
+                        else {
+                            Write-Host "Virtual Machine [$addComputerVMToDomain] does not exist" -ForegroundColor Cyan
+                        }
                      }
                 }
                 pause
