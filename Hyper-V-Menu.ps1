@@ -314,6 +314,7 @@ do {
                     } '3' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     New-ExampleOfDHCPConf
+                    $vmName = Read-Host "Enter DC to Configure DHCP-Scope"
                     $NameOfDCHPScope = Read-Host "Name of DCHP-Scope"
                     [int]$startOfDCHPScope = Read-Host "Start of DHCP-Scope"
                     [int]$endOfDHCPScope = Read-Host "End of DCHP-Scope"
