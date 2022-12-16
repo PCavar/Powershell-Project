@@ -63,20 +63,19 @@ function Remove-PCVM {
         Write-Error "[Virtual Machine $($VMName)] does not exist!"
     } elseif (((Get-VM $VMName).State) -eq "Running") {
         Write-Host "Shutting down $VMName before deleting" -ForegroundColor Cyan
-        Get-VM -Name $VMName | Stop-VM
-        Remove-VM $VMName
+        Get-VM -Name $VMName | Stop-VM -Force:$true
+        Remove-VM $VMName -Force:$true
         Remove-Item $VHDPath,$VMPath -Force
     } else {
         Remove-VM $VMName -Confirm:$false -Force -Verbose
         Remove-Item $VHDPath,$VMPath -Confirm:$false -Force -Verbose
     }
-    Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Cyan
 }
 
 function New-PCCheckVMStatusOn {
     if(((Get-VM $VMName).State) -eq "Running") {
         Write-Error "[Virtual Machine $($VMName)] is already Turned on and Running" -ForegroundColor Cyan
-    } elseif (((Get-VM $VMName).name) -eq $true){
+    } elseif (((Get-VM $VMName).State) -eq "Off"){
         Write-Host "Starting $VMName" -ForegroundColor Cyan
         Get-VM $VMName | Start-VM
         Write-Host "$VMName is now up and Running!" -ForegroundColor Cyan
@@ -87,7 +86,7 @@ function New-PCCheckVMStatusOn {
 function New-PCCheckVMStatusOff {
     if(((Get-VM $VMName).State) -eq "Off") {
         Write-Host "$VMName is already turned Off" -ForegroundColor Cyan
-    } elseif (((Get-VM $VMName).Name) -eq $true) {
+    } elseif (((Get-VM $VMName).State) -eq "Running") {
         Write-Host "Shutting down $VMName" -ForegroundColor Cyan
         Start-Sleep -Seconds 1
         Get-VM -Name $VMName | Stop-VM
@@ -137,7 +136,7 @@ function Install-PCADDS {
         }
 }
 function New-PCDCNetworkConfiguration {
-    Invoke-Command -VMName $configureDCNetworkSettings -Credential (Get-Credential) -ScriptBlock {
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
         ##This disables IPV6 
         Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
         Start-Sleep -Seconds 5
@@ -154,26 +153,56 @@ function New-PCDCNetworkConfiguration {
         
         Write-Host "Configuration Completed!" -ForegroundColor Cyan
         Start-Sleep -Seconds 2
+
+        Rename-Computer -NewName $Using:VMName
+        Start-Sleep -Seconds 2
+        Restart-Computer -Force
     }
 }
 
-function New-CheckIfDCToInstallDHCPExists {
-    $ifDHCPConfDCExists = Get-VM -Name $VMName 
-    if($ifDHCPConfDCExists) {
-} else {
-
-}
-}
 function New-PCConfigureDHCP {
     Invoke-Command -VMName $vmName -Credential (Get-Credential) {
         Install-WindowsFeature -Name 'DHCP' -IncludeManagementTools
         Start-Sleep -Seconds 60
-        Add-DhcpServerv4Scope -Name $Using:NameOfDCHPScope -StartRange $Using:startOfDCHPScope -EndRange $Using:endOfDHCPScope -SubnetMask $Using:subnetmaskDCHPScope
+        Add-DhcpServerv4Scope -Name $Using:NameOfDCHPScope -StartRange $Using:startOfDCHPScope -EndRange $Using:endOfDHCPScope -SubnetMask $Using:subnetmaskDCHPScope -State Active
         Set-DhcpServerV4OptionValue -DnsServer $Using:setDNSDHCP -Router $Using:routerDHCP
         Set-DhcpServerv4Scope -ScopeId $Using:enterDHCPScopeId -LeaseDuration $Using:leaseDurationDHCP
         Restart-Service dhcpserver -Force
         Restart-Computer -Force
     }
+}
+function New-AddDCToExistingDomain {
+Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
+
+    ##config Active-Directory
+    Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
+    Install-WindowsFeature RSAT-AD-PowerShell
+    Install-WindowsFeature RSAT-ADDS
+
+    Start-Sleep -Seconds 10
+
+    # Windows PowerShell script for AD DS Deployment
+    # Password for domain join credentials will be prompted
+    # no DSRM password prompt.
+    $adminForVMPassword = "RandomPassword123"
+
+    Import-Module ADDSDeployment
+    Install-ADDSDomainController `
+    -NoGlobalCatalog:$false `
+    -CreateDnsDelegation:$false `
+    -Credential (Get-Credential POWERSHELL.LOCAL\Administrator) `
+    -CriticalReplicationOnly:$false `
+    -SiteName "Default-First-Site-Name" `
+    -DomainName "POWERSHELL.LOCAL" `
+    -ReplicationSourceDC "DC01.POWERSHELL.LOCAL"`
+    -DatabasePath "C:\Windows\NTDS" `
+    -InstallDns:$true `
+    -LogPath "C:\Windows\NTDS" `
+    -NoRebootOnCompletion:$false `
+    -SysvolPath "C:\Windows\SYSVOL" `
+    -SafeModeAdministratorPassword (ConvertTo-SecureString $adminForVMPassword -AsPlainText -Force) `
+    -Force:$true
+}
 }
 
 function New-ExampleOfIpDnsRouterConf {
@@ -231,6 +260,7 @@ function New-ProvisioningDCVM
     Write-Host "1: Configure IP/DNS/Gateway"
     Write-Host "2: Install AD/DS Roles on Windows Server"
     Write-Host "3: Configure DHCP on Windows Server"
+    Write-Host "4: Join a Server to existing Domain"
  }
 function New-AddVMToDomain {
     Invoke-Command -VMName $addComputerVMToDomain -Credential (Get-Credential) -ScriptBlock {
@@ -307,7 +337,7 @@ do {
                    '1' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     New-ExampleOfIpDnsRouterConf
-                    $configureDCNetworkSettings = Read-Host "Enter DC to configure IP/DNS/Gateway"
+                    $VMName = Read-Host "Enter DC to configure IP/DNS/Gateway"
                     $IPAddressDCConf = Read-Host "Enter Value for IP-Address"
                     $defaultGatewayDCConf = Read-Host "Enter Value for Gateway/Router"
                     $preFixLengthDCConf = Read-Host "Enter Value For Prefix length"
@@ -335,7 +365,16 @@ do {
                     } else {
                     Write-Host "Virtual Machine [$VMName] does not exist" -ForegroundColor Cyan
                     }
+                    } '4' {
+                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    $VMName = Read-Host "Enter DC to join Domain"
+                    if(Get-VM -Name $VMName) {
+                    New-AddDCToExistingDomain
+                    } 
+                    else { 
+                    Write-Host "Virtual Machine [$VMName] does not exist" -ForegroundColor Cyan
                     }
+                  }
                 }
                 pause  
             } until ($WindowsServerADConfigMenu -eq 'B')
