@@ -1,3 +1,5 @@
+##NOTE, if somethings bugging and you dont know why, remove the this variable
+##for trubleshooting! Thanks :)
 $ErrorActionPreference = 'SilentlyContinue'
 
 $VMPath = "C:\VM-Sysprep"
