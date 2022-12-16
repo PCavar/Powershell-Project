@@ -190,7 +190,7 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
     Install-ADDSDomainController `
     -NoGlobalCatalog:$false `
     -CreateDnsDelegation:$false `
-    -Credential (Get-Credential POWERSHELL.LOCAL\Administrator) `
+    -Credential (Get-Credential POWERSHELL\Administrator) `
     -CriticalReplicationOnly:$false `
     -SiteName "Default-First-Site-Name" `
     -DomainName "POWERSHELL.LOCAL" `
