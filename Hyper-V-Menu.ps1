@@ -159,7 +159,7 @@ function New-PCDCNetworkConfiguration {
         Restart-Computer -Force
     }
 }
-
+<#
 function New-PCConfigureDHCP {
     Invoke-Command -VMName $vmName -Credential (Get-Credential) {
         Install-WindowsFeature -Name 'DHCP' -IncludeManagementTools
@@ -168,9 +168,8 @@ function New-PCConfigureDHCP {
         Set-DhcpServerV4OptionValue -DnsServer $Using:setDNSDHCP -Router $Using:routerDHCP
         Set-DhcpServerv4Scope -ScopeId $Using:enterDHCPScopeId -LeaseDuration $Using:leaseDurationDHCP
         Restart-Service dhcpserver -Force
-        Restart-Computer -Force
-    }
-}
+    }   
+} #>
 function New-AddDCToExistingDomain {
 Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
 
@@ -354,7 +353,8 @@ do {
                     } '3' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     New-ExampleOfDHCPConf
-                    $VMName = Read-Host "Enter DC to Configure DHCP-Scope"
+                    Write-Host "Comming soon"
+                    <#$VMName = Read-Host "Enter DC to Configure DHCP-Scope"
                     if(Get-VM -Name $VMName) {
                     $NameOfDCHPScope = Read-Host "Name of DCHP-Scope"
                     $startOfDCHPScope = Read-Host "Start of DHCP-Scope"
@@ -367,7 +367,7 @@ do {
                     New-PCConfigureDHCP
                     } else {
                     Write-Host "Virtual Machine [$VMName] does not exist" -ForegroundColor Cyan
-                    }
+                    } #>
                     } '4' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     $VMName = Read-Host "Enter DC to join Domain"
