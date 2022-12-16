@@ -157,6 +157,13 @@ function New-PCDCNetworkConfiguration {
     }
 }
 
+function New-CheckIfDCToInstallDHCPExists {
+    $ifDHCPConfDCExists = Get-VM -Name $VMName 
+    if($ifDHCPConfDCExists) {
+} else {
+
+}
+}
 function New-PCConfigureDHCP {
     Invoke-Command -VMName $vmName -Credential (Get-Credential) {
         Install-WindowsFeature -Name 'DHCP' -IncludeManagementTools
@@ -181,7 +188,7 @@ function New-ExampleOfIpDnsRouterConf {
 function New-ExampleOfDHCPConf {
     Write-Host "Example of a DHCP-Configuration"
     Write-Host "-Name 'DHCP' -IncludeManagementTools"
-    Write-Host "Add-DhcpServerv4Scope -Name "DHCP Scope" -StartRange 192.168.10.5"
+    Write-Host "Add-DhcpServerv4Scope -Name DHCP Scope -StartRange 192.168.10.5"
     Write-Host "-EndRange 192.168.10.100 -SubnetMask 255.255.255.0"
     Write-Host "Set-DhcpServerV4OptionValue -DnsServer 192.168.10.2 -Router 192.168.10.1"
     Write-Host "Set-DhcpServerv4Scope -ScopeId 192.168.10.2 -LeaseDuration 1.00:00:00"
@@ -314,16 +321,20 @@ do {
                     } '3' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     New-ExampleOfDHCPConf
-                    $vmName = Read-Host "Enter DC to Configure DHCP-Scope"
+                    $VMName = Read-Host "Enter DC to Configure DHCP-Scope"
+                    if(Get-VM -Name $VMName) {
                     $NameOfDCHPScope = Read-Host "Name of DCHP-Scope"
-                    [int]$startOfDCHPScope = Read-Host "Start of DHCP-Scope"
-                    [int]$endOfDHCPScope = Read-Host "End of DCHP-Scope"
-                    [int]$subnetmaskDCHPScope = Read-Host "Enter Prefix-length"
-                    [int]$setDNSDHCP = Read-Host "Enter DNS"
-                    [int]$routerDHCP = Read-Host "Enter router IP"
-                    [int]$enterDHCPScopeId = Read-Host "Enter DHCP Scope ID"
-                    [int]$leaseDurationDHCP = Read-Host "Enter DHCP Lease-Duration"
+                    $startOfDCHPScope = Read-Host "Start of DHCP-Scope"
+                    $endOfDHCPScope = Read-Host "End of DCHP-Scope"
+                    $subnetmaskDCHPScope = Read-Host "Enter Prefix-length"
+                    $setDNSDHCP = Read-Host "Enter DNS"
+                    $routerDHCP = Read-Host "Enter router IP"
+                    $enterDHCPScopeId = Read-Host "Enter DHCP Scope ID"
+                    $leaseDurationDHCP = Read-Host "Enter DHCP Lease-Duration"
                     New-PCConfigureDHCP
+                    } else {
+                    Write-Host "Virtual Machine [$VMName] does not exist" -ForegroundColor Cyan
+                    }
                     }
                 }
                 pause  
