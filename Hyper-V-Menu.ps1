@@ -232,7 +232,7 @@ function New-AddVMToDomain {
         Set-DnsClientServerAddress -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex -ServerAddresses $Using:setDNSVMBeforeJoiningDomain
         Start-Sleep -Seconds 3
 
-        Rename-Computer -NewName $Usin:addComputerVMToDomain -Force
+        Rename-Computer -NewName $Using:addComputerVMToDomain -Force
         Start-Sleep -Seconds 2
 
         Add-Computer -DomainName $Using:domainNameToJoin -Credential (Get-Credential)
