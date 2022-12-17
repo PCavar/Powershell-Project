@@ -17,7 +17,7 @@ First one represents path for the vm folders.
 Second represents parent path where a new copy from the Windows Server template(.VHDX) is made.
 Third represents parent path where a new copy from the Windows 10 template(.VHDX) is made.
 
-Requirements for this to work without any hassle is a SysPrep WS2012-2022 for DC/AD And WindowsPro(Clients) for VMs.(I'm using .VHDX)
+Requirements for this to work without any hassle is a SysPrep WS2012-2022 for DC/AD And Windows 10 Pro(Clients) for VMs.(I'm using .VHDX)
 Recommended to use Powershell Core 7.3.0 and higher.
 NOTE: As you are managing Hyper-V with provisioning, elevated accessrights(admin) are required.
 
