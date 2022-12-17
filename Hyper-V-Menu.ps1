@@ -89,7 +89,7 @@ function New-PCCheckVMStatusOff {
     } elseif (((Get-VM $VMName).State) -eq "Running") {
         Write-Host "Shutting down $VMName" -ForegroundColor Cyan
         Start-Sleep -Seconds 1
-        Get-VM -Name $VMName | Stop-VM
+        Get-VM -Name $VMName | Stop-VM -Force:$true
         Write-Host "$VMName is now turned Off" -ForegroundColor Cyan
     } else {
         Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Cyan
