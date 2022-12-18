@@ -128,7 +128,8 @@ function Install-PCADDS {
             Write-Verbose "Successfully Configured AD Services" -ForegroundColor Cyan
 
             Start-Sleep -Seconds 5
-            Restart-Computer -Force
+            Restart-Computer -Wait
+            Write-Host "Computer restarted and configuration successfully applied!" -ForegroundColor Cyan
 
         } else {  
             Write-Verbose "Powershell.local already exists!"
@@ -139,7 +140,7 @@ function New-PCDCNetworkConfiguration {
     Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
         ##This disables IPV6 
         Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
-        Start-Sleep -Seconds 5
+        Start-Sleep -Seconds 2
 
         New-NetIPAddress `
          -IPAddress $Using:IPAddressDCConf `
@@ -156,7 +157,8 @@ function New-PCDCNetworkConfiguration {
 
         Rename-Computer -NewName $Using:VMName
         Start-Sleep -Seconds 2
-        Restart-Computer -Force
+        Restart-Computer -Wait
+        Write-Host "Computer restarted and setting successfully applied!" -ForegroundColor Cyan
     }
 }
 
@@ -178,7 +180,7 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
     Install-WindowsFeature RSAT-AD-PowerShell
     Install-WindowsFeature RSAT-ADDS
 
-    Start-Sleep -Seconds 10
+    Start-Sleep -Seconds 5
 
     # Windows PowerShell script for AD DS Deployment
     # Password for domain join credentials will be prompted
@@ -260,7 +262,8 @@ function New-MoveFSMORolesAndDecomissionServer {
 
     #uninstall WindowsFeature
     Uninstall-WindowsFeature AD-Domain-Services -IncludeManagementTools
-    Restart-Computer -Force 
+    Restart-Computer -Force -Wait
+    Write-Host "Moved FSMO roles and successfully demoted Server" -ForegroundColor Cyan
     }
 }
 #Domain Controllers Main Menu
