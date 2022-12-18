@@ -143,19 +143,19 @@ function New-PCDCNetworkConfiguration {
         Start-Sleep -Seconds 2
 
         New-NetIPAddress `
-         -IPAddress $Using:IPAddressDCConf `
-         -InterfaceAlias (Get-NetAdapter).InterfaceAlias `
-         -DefaultGateway $Using:defaultGatewayDCConf `
-         -PrefixLength $Using:preFixLengthDCConf `
+         -IPAddress $Using:IPAddressDCConf -Force `
+         -InterfaceAlias (Get-NetAdapter).InterfaceAlias -Force `
+         -DefaultGateway $Using:defaultGatewayDCConf -Force `
+         -PrefixLength $Using:preFixLengthDCConf -Force`
 
         Start-Sleep -Seconds 2
 
-        Set-DnsClientServerAddress -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex -ServerAddresses $Using:DNSServerClientDCConf
+        Set-DnsClientServerAddress -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex -ServerAddresses $Using:DNSServerClientDCConf -Force:$true
         
         Write-Host "Configuration Completed!" -ForegroundColor Cyan
         Start-Sleep -Seconds 2
 
-        Rename-Computer -NewName $Using:VMName
+        Rename-Computer -NewName $Using:VMName -Force
         Start-Sleep -Seconds 2
         Restart-Computer -Wait
         Write-Host "Computer restarted and setting successfully applied!" -ForegroundColor Cyan
