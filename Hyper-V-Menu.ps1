@@ -189,6 +189,7 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
 
     Import-Module ADDSDeployment
     Install-ADDSDomainController `
+    -AllowDomainControllerReinstall:$true `
     -NoGlobalCatalog:$false `
     -CreateDnsDelegation:$false `
     -Credential (Get-Credential POWERSHELL\Administrator) `
