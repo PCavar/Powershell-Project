@@ -267,6 +267,11 @@ function New-MoveFSMORolesAndDecomissionServer {
     Write-Host "Moved FSMO roles and successfully demoted Server" -ForegroundColor Cyan
     }
 }
+
+function New-VMPSSessionRemote {
+    $savePSSessionVM = New-PSSession -VMName $chooseVMtoEnterPS -Credential(Get-Credential)
+    Enter-PSSession $savePSSessionVM 
+}
 #Domain Controllers Main Menu
 function New-DCMENU
 {
@@ -307,10 +312,21 @@ function New-ProvisioningDCVM
     Write-Host "4: Join a Server to existing Domain"
     Write-Host "5: Move FSMO-Roles and Decomission Windows Server"
  }
+
+ function New-DCVMSessionEnterer {
+    param (
+        [string]$MenuTitleForEnteringSession = 'Enter a Remote PowerShell Session to a VM'
+    )
+    Clear-Host
+    Write-Host "================ $MenuTitleForEnteringSession ================"
+    Write-Host "1. Choose a VM to enter a Remote PSSession"
+ }
+
 do {
     Write-Host "================ Main Menu ==============="
     Write-Host "1: Provision/Manage Virtual Machines"
     Write-Host "2: Configure Domain Services"
+    Write-Host "3: Enter Remote Powershell Session"
     Write-Host "Q: Press Q to exit."
 
     $MainMenu = Read-Host "Choose an entrance Or press Q to quit"
@@ -423,6 +439,21 @@ do {
                 }
                 pause  
             } until ($WindowsServerADConfigMenu -eq 'B')
+        } '3' {
+            do {
+                New-DCVMSessionEnterer
+                $enterPSSessionVM = Read-Host "Choose an entrance or Press B for Back"
+                switch($enterPSSessionVM){
+                '1' {
+                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    $chooseVMtoEnterPS = Read-Host "Choose VM to remotely enter PSSession"
+                    New-VMPSSessionRemote
+                    Write-Host "Session successfully entered!" -ForegroundColor Cyan
+                    Write-Host "Please exit script to continue your remote session" -ForegroundColor Cyan
+                    }
+                }
+                pause
+        } until ($enterPSSessionVM -eq 'B')
         }
     }
 } until($MainMenu -eq 'Q')
