@@ -195,8 +195,8 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
     -Credential (Get-Credential POWERSHELL\Administrator) `
     -CriticalReplicationOnly:$false `
     -SiteName "Default-First-Site-Name" `
-    -DomainName "POWERSHELL.LOCAL" `
-    -ReplicationSourceDC "DC01.POWERSHELL.LOCAL"`
+    -DomainName "$Using:domainNameReplicationVM" `
+    -ReplicationSourceDC $Using:ADReplicationSourceName`
     -DatabasePath "C:\Windows\NTDS" `
     -InstallDns:$true `
     -LogPath "C:\Windows\NTDS" `
@@ -421,6 +421,8 @@ do {
                     } '4' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     $VMName = Read-Host "Enter DC to join Domain"
+                    $domainNameReplicationVM = Read-Host "Enter Domainname EX Powershell.local"
+                    $ADReplicationSourceName = Read-Host "Enter replication Source EX AD01.domainname.local"
                     if(Get-VM -Name $VMName) {
                     New-AddDCToExistingDomain
                     } else { 
