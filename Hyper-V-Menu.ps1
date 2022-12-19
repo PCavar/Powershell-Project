@@ -157,8 +157,8 @@ function New-PCDCNetworkConfiguration {
 
         Rename-Computer -NewName $Using:VMName -Force
         Start-Sleep -Seconds 2
-        Restart-Computer -Wait
         Write-Host "Computer restarted and setting successfully applied!" -ForegroundColor Cyan
+        Restart-Computer -Force
     }
 }
 
