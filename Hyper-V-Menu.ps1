@@ -113,8 +113,8 @@ function Install-PCADDS {
             -CreateDnsDelegation:$false `
             -DatabasePath "C:\Windows\NTDS" `
             -DomainMode "WinThreshold" `
-            -DomainName "powershell.local" `
-            -DomainNetbiosName "POWERSHELL" `
+            -DomainName "mstile.se" `
+            -DomainNetbiosName "MSTILE" `
             -ForestMode "WinThreshold" `
             -InstallDns:$true `
             -LogPath "C:\Windows\NTDS" `
@@ -132,7 +132,7 @@ function Install-PCADDS {
             Write-Host "Computer restarted and configuration successfully applied!" -ForegroundColor Cyan
 
         } else {  
-            Write-Verbose "Powershell.local already exists!"
+            Write-Verbose "Mstile.se already exists!"
             }
         }
 }
@@ -195,8 +195,8 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
     -Credential (Get-Credential POWERSHELL\Administrator) `
     -CriticalReplicationOnly:$false `
     -SiteName "Default-First-Site-Name" `
-    -DomainName "POWERSHELL.LOCAL" `
-    -ReplicationSourceDC "AD01.POWERSHELL.LOCAL"`
+    -DomainName "mstile.se" `
+    -ReplicationSourceDC "AD01.MSTILE.SE"`
     -DatabasePath "C:\Windows\NTDS" `
     -InstallDns:$true `
     -LogPath "C:\Windows\NTDS" `
