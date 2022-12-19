@@ -143,10 +143,10 @@ function New-PCDCNetworkConfiguration {
         Start-Sleep -Seconds 2
 
         New-NetIPAddress `
-         -IPAddress $Using:IPAddressDCConf -Force `
-         -InterfaceAlias (Get-NetAdapter).InterfaceAlias -Force `
-         -DefaultGateway $Using:defaultGatewayDCConf -Force `
-         -PrefixLength $Using:preFixLengthDCConf -Force`
+         -IPAddress $Using:IPAddressDCConf `
+         -InterfaceAlias (Get-NetAdapter).InterfaceAlias `
+         -DefaultGateway $Using:defaultGatewayDCConf `
+         -PrefixLength $Using:preFixLengthDCConf `
 
         Start-Sleep -Seconds 2
 
