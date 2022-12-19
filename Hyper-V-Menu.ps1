@@ -192,7 +192,7 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
     -AllowDomainControllerReinstall:$true `
     -NoGlobalCatalog:$false `
     -CreateDnsDelegation:$false `
-    -Credential (Get-Credential POWERSHELL\Administrator) `
+    -Credential (Get-Credential MSTILE\Administrator) `
     -CriticalReplicationOnly:$false `
     -SiteName "Default-First-Site-Name" `
     -DomainName "mstile.se" `
