@@ -196,7 +196,7 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
     -CriticalReplicationOnly:$false `
     -SiteName "Default-First-Site-Name" `
     -DomainName "mstile.se" `
-    -ReplicationSourceDC "AD01.MSTILE.SE"`
+    -ReplicationSourceDC "DC01.MSTILE.SE"`
     -DatabasePath "C:\Windows\NTDS" `
     -InstallDns:$true `
     -LogPath "C:\Windows\NTDS" `
