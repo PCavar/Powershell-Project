@@ -1,6 +1,7 @@
 ##NOTE, if somethings bugging and you dont know why, remove the this variable
 ##for trubleshooting! Thanks :)
 $ErrorActionPreference = 'SilentlyContinue'
+$VMName = $null
 
 $VMPath = "C:\VM-Sysprep"
 $ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
@@ -74,10 +75,10 @@ function Remove-PCVM {
 
 function New-PCCheckVMStatusOn {
     if(((Get-VM $VMName).State) -eq "Running") {
-        Write-Error "[Virtual Machine $($VMName)] is already Turned on and Running" -ForegroundColor Cyan
+        Write-Host "[Virtual Machine $($VMName)] is already Turned on and Running" -ForegroundColor Cyan
     } elseif (((Get-VM $VMName).State) -eq "Off"){
         Write-Host "Starting $VMName" -ForegroundColor Cyan
-        Get-VM $VMName | Start-VM
+        Get-VM $VMName | Start-VM -Verbose
         Write-Host "$VMName is now up and Running!" -ForegroundColor Cyan
     } else {
         Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Cyan
