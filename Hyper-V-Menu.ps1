@@ -139,11 +139,12 @@ function Install-PCADDS {
 function New-PCDCNetworkConfiguration {
     Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
 
-        Set-NetIPInterface -InterfaceAlias (Get-NetAdapter).InterfaceAlias `
+        Set-NetIPInterface `
+        -InterfaceAlias (Get-NetAdapter).InterfaceAlias `
         -AddressFamily IPv4 `
         -IPAddress $Using:IPAddressDCConf `
         -PrefixLength $Using:preFixLengthDCConf `
-        -DefaultGateway $Using:defaultGatewayDCConf -Force:$true
+        -DefaultGateway $Using:defaultGatewayDCConf
 
        <# New-NetIPAddress `
          -IPAddress $Using:IPAddressDCConf `
@@ -157,7 +158,7 @@ function New-PCDCNetworkConfiguration {
         Set-DnsClient -InterfaceAlias (Get-NetAdapter).InterfaceAlias -ServerAddresses ("$Using:DNSServerClientDCConf")
         ##This disables IPV6 
         Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
-        
+
         Start-Sleep -Seconds 2
         Write-Host "Configuration Completed!" -ForegroundColor Cyan
         Start-Sleep -Seconds 2
