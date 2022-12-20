@@ -138,20 +138,27 @@ function Install-PCADDS {
 }
 function New-PCDCNetworkConfiguration {
     Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
-        ##This disables IPV6 
-        Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
-        Start-Sleep -Seconds 2
 
-        New-NetIPAddress `
+        Set-NetIPInterface -InterfaceAlias (Get-NetAdapter).InterfaceAlias `
+        -AddressFamily IPv4 `
+        -IPAddress $Using:IPAddressDCConf `
+        -PrefixLength $Using:preFixLengthDCConf `
+        -DefaultGateway $Using:defaultGatewayDCConf -Force:$true
+
+       <# New-NetIPAddress `
          -IPAddress $Using:IPAddressDCConf `
          -InterfaceAlias (Get-NetAdapter).InterfaceAlias `
          -DefaultGateway $Using:defaultGatewayDCConf `
          -PrefixLength $Using:preFixLengthDCConf `
+        #>
 
         Start-Sleep -Seconds 2
 
-        Set-DnsClientServerAddress -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex -ServerAddresses $Using:DNSServerClientDCConf -Force:$true
+        Set-DnsClient -InterfaceAlias (Get-NetAdapter).InterfaceAlias -ServerAddresses ("$Using:DNSServerClientDCConf")
+        ##This disables IPV6 
+        Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
         
+        Start-Sleep -Seconds 2
         Write-Host "Configuration Completed!" -ForegroundColor Cyan
         Start-Sleep -Seconds 2
 
@@ -212,7 +219,7 @@ function New-ExampleOfIpDnsRouterConf {
     Write-Host "IPAddress Value: 192.168.10.2" -ForegroundColor Cyan
     Write-Host "DefaultGateway Value: 192.168.10.1" -ForegroundColor Cyan
     Write-Host "InterfaceAlias Value:" (Get-NetAdapter).InterfaceAlias -ForegroundColor Cyan
-    Write-Host "PrefixLength/Subnet Value: 255.255.255.0" -ForegroundColor Cyan
+    Write-Host "PrefixLength/Subnet Value: 24" -ForegroundColor Cyan
     Write-Host "DNS ServerClient Value: 192.168.10.2" -ForegroundColor Cyan
 }
 
