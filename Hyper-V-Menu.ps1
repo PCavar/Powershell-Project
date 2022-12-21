@@ -113,8 +113,8 @@ function Install-PCADDS {
             -CreateDnsDelegation:$false `
             -DatabasePath "C:\Windows\NTDS" `
             -DomainMode "WinThreshold" `
-            -DomainName "mstile.se" `
-            -DomainNetbiosName "MSTILE" `
+            -DomainName $Using:DomainNameForDomainController `
+            -DomainNetbiosName $Using:netBIOSNameDC `
             -ForestMode "WinThreshold" `
             -InstallDns:$true `
             -LogPath "C:\Windows\NTDS" `
@@ -203,8 +203,8 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
     -Credential (Get-Credential MSTILE\Administrator) `
     -CriticalReplicationOnly:$false `
     -SiteName "Default-First-Site-Name" `
-    -DomainName "mstile.se" `
-    -ReplicationSourceDC "DC01.MSTILE.SE"`
+    -DomainName $Using:DomainNameForDomainController `
+    -ReplicationSourceDC $Using:enterReplicationSourceDC `
     -DatabasePath "C:\Windows\NTDS" `
     -InstallDns:$true `
     -LogPath "C:\Windows\NTDS" `
@@ -407,6 +407,8 @@ do {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     Write-Host "This Option Installes AD/DS on a Windows Server"
                     $VMName = Read-Host "Enter DC to install AD/DS Services"
+                    $DomainNameForDomainController = Read-Host "Enter DomainName ex mstile.se"
+                    $netBIOSNameDC = Read-Host "Enter NetBios Name ex MSTILE"
                     Install-PCADDS -Verbose
                     } '3' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
@@ -429,6 +431,8 @@ do {
                     } '4' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     $VMName = Read-Host "Enter DC to join Domain"
+                    $DomainNameForDomainController = Read-Host "Enter DomainName ex mstile.se"
+                    $enterReplicationSourceDC = Read-Host "Enter DomainController ex DC01.mstile.se"
                     if(Get-VM -Name $VMName) {
                     New-AddDCToExistingDomain
                     } else { 
