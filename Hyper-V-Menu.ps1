@@ -27,20 +27,32 @@ param (
 
     $VHDPath = "$VMPath\$VMName\$VMName.vhdx"
     New-VHD -ParentPath "$TemplatePath" -Path $VHDPath -Differencing -Verbose
+
+    if($MachineType -like "Server") {
+        New-VM `
+        -Name $VMName `
+        -Path $VMPath `
+        -MemoryStartupBytes 2GB `
+        -VHDPath $VHDPath `
+        -BootDevice VHD `
+        -Generation 2 `
+        -Switch LAN     
+    } else {
+        New-VM `
+        -Name $VMName `
+        -Path $VMPath `
+        -MemoryStartupBytes 1GB `
+        -VHDPath $VHDPath `
+        -BootDevice VHD `
+        -Generation 2 `
+        -Switch LAN
+    }
     
-	New-VM `
-	-Name $VMName `
-    -Path $VMPath `
-	-MemoryStartupBytes 2GB `
-    -VHDPath $VHDPath `
-    -BootDevice VHD `
-	-Generation 2 `
-	-Switch LAN
 
     Set-VMProcessor -VMName $VMName -Count 4 -Verbose
 
     Enable-VMIntegrationService -VMName $VMName -Name "Guest Service Interface" -Verbose
-    Set-VM -VMName $VMName -AutomaticCheckpointsEnabled $false -Verbose
+    Set-VM -VMName $VMName -AutomaticCheckpointsEnabled $false -CheckpointType Disabled -Verbose
   
     Write-Host "[$($VMName)] created"
     Start-VM $VMName
