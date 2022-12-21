@@ -72,7 +72,7 @@ function Remove-PCVM {
     $VHDPath = (get-vm -name $VMName).HardDrives.Path
 
     if (!(get-vm $VMName -ErrorAction SilentlyContinue)) {
-        Write-Error "[Virtual Machine $($VMName)] does not exist!"
+        Write-Host "Virtual Machine $VMName does not exist!"
     } elseif (((Get-VM $VMName).State) -eq "Running") {
         Write-Host "Shutting down $VMName before deleting"
         Get-VM -Name $VMName | Stop-VM -Force:$true
