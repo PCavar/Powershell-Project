@@ -1,7 +1,6 @@
 ##NOTE, if somethings bugging and you dont know why, remove the this variable
 ##for trubleshooting! Thanks :)
 $ErrorActionPreference = 'SilentlyContinue'
-$VMName = $null
 
 $VMPath = "C:\VM-Sysprep"
 $ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
@@ -43,10 +42,10 @@ param (
     Enable-VMIntegrationService -VMName $VMName -Name "Guest Service Interface" -Verbose
     Set-VM -VMName $VMName -AutomaticCheckpointsEnabled $false -Verbose
   
-    Write-Host "[$($VMName)] created" -ForegroundColor Cyan
+    Write-Host "[$($VMName)] created"
     Start-VM $VMName
     } else {
-        Write-Host "$VMName already exists!" -ForegroundColor Cyan
+        Write-Host "$VMName already exists!"
     }
 }
 
@@ -63,7 +62,7 @@ function Remove-PCVM {
     if (!(get-vm $VMName -ErrorAction SilentlyContinue)) {
         Write-Error "[Virtual Machine $($VMName)] does not exist!"
     } elseif (((Get-VM $VMName).State) -eq "Running") {
-        Write-Host "Shutting down $VMName before deleting" -ForegroundColor Cyan
+        Write-Host "Shutting down $VMName before deleting"
         Get-VM -Name $VMName | Stop-VM -Force:$true
         Remove-VM $VMName -Force:$true
         Remove-Item $VHDPath,$VMPath -Force
@@ -75,25 +74,25 @@ function Remove-PCVM {
 
 function New-PCCheckVMStatusOn {
     if(((Get-VM $VMName).State) -eq "Running") {
-        Write-Host "[Virtual Machine $($VMName)] is already Turned on and Running" -ForegroundColor Cyan
+        Write-Host "[Virtual Machine $($VMName)] is already Turned on and Running"
     } elseif (((Get-VM $VMName).State) -eq "Off"){
-        Write-Host "Starting $VMName" -ForegroundColor Cyan
+        Write-Host "Starting $VMName"
         Get-VM $VMName | Start-VM -Verbose
-        Write-Host "$VMName is now up and Running!" -ForegroundColor Cyan
+        Write-Host "$VMName is now up and Running!"
     } else {
-        Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Cyan
+        Write-Host "Virtual Machine $VMName does not exist"
     }
 }
 function New-PCCheckVMStatusOff {
     if(((Get-VM $VMName).State) -eq "Off") {
-        Write-Host "$VMName is already turned Off" -ForegroundColor Cyan
+        Write-Host "$VMName is already turned Off"
     } elseif (((Get-VM $VMName).State) -eq "Running") {
-        Write-Host "Shutting down $VMName" -ForegroundColor Cyan
+        Write-Host "Shutting down $VMName"
         Start-Sleep -Seconds 1
         Get-VM -Name $VMName | Stop-VM -Force:$true
-        Write-Host "$VMName is now turned Off" -ForegroundColor Cyan
+        Write-Host "$VMName is now turned Off"
     } else {
-        Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Cyan
+        Write-Host "Virtual Machine $VMName does not exist"
     }
 }
 function Install-PCADDS {
@@ -124,13 +123,13 @@ function Install-PCADDS {
             -NoRebootOnCompletion:$false `
             -Force:$true
             
-            Write-Verbose "Configuration Succeded!" -ForegroundColor Cyan
-            Write-Verbose "Applying settings..." -ForegroundColor Cyan
-            Write-Verbose "Successfully Configured AD Services" -ForegroundColor Cyan
+            Write-Verbose "Configuration Succeded!"
+            Write-Verbose "Applying settings..."
+            Write-Verbose "Successfully Configured AD Services"
 
             Start-Sleep -Seconds 5
             Restart-Computer -Wait
-            Write-Host "Computer restarted and configuration successfully applied!" -ForegroundColor Cyan
+            Write-Host "Computer restarted and configuration successfully applied!"
 
         } else {  
             Write-Verbose "Mstile.se already exists!"
@@ -161,12 +160,12 @@ function New-PCDCNetworkConfiguration {
         Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
 
         Start-Sleep -Seconds 2
-        Write-Host "Configuration Completed!" -ForegroundColor Cyan
+        Write-Host "Configuration Completed!"
         Start-Sleep -Seconds 2
 
         Rename-Computer -NewName $Using:VMName -Force
         Start-Sleep -Seconds 2
-        Write-Host "Computer restarted and setting successfully applied!" -ForegroundColor Cyan
+        Write-Host "Computer restarted and setting successfully applied!"
         Restart-Computer -Force
     }
 }
@@ -217,21 +216,21 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
 }
 
 function New-ExampleOfIpDnsRouterConf {
-    Write-Host "Example of a configuration" -ForegroundColor Cyan
-    Write-Host "IPAddress Value: 192.168.10.2" -ForegroundColor Cyan
-    Write-Host "DefaultGateway Value: 192.168.10.1" -ForegroundColor Cyan
-    Write-Host "InterfaceAlias Value:" (Get-NetAdapter).InterfaceAlias -ForegroundColor Cyan
-    Write-Host "PrefixLength/Subnet Value: 24" -ForegroundColor Cyan
-    Write-Host "DNS ServerClient Value: 192.168.10.2" -ForegroundColor Cyan
+    Write-Host "Example of a configuration"
+    Write-Host "IPAddress Value: 192.168.10.2"
+    Write-Host "DefaultGateway Value: 192.168.10.1"
+    Write-Host "InterfaceAlias Value:" (Get-NetAdapter).InterfaceAlias
+    Write-Host "PrefixLength/Subnet Value: 24"
+    Write-Host "DNS ServerClient Value: 192.168.10.2"
 }
 
 function New-ExampleOfDHCPConf {
-    Write-Host "Example of a DHCP-Configuration" -ForegroundColor Cyan
-    Write-Host "-Name 'DHCP' -IncludeManagementTools" -ForegroundColor Cyan
-    Write-Host "Add-DhcpServerv4Scope -Name DHCP Scope -StartRange 192.168.10.5" -ForegroundColor Cyan
-    Write-Host "-EndRange 192.168.10.100 -SubnetMask 255.255.255.0" -ForegroundColor Cyan
-    Write-Host "Set-DhcpServerV4OptionValue -DnsServer 192.168.10.2 -Router 192.168.10.1" -ForegroundColor Cyan
-    Write-Host "Set-DhcpServerv4Scope -ScopeId 192.168.10.2 -LeaseDuration 1.00:00:00" -ForegroundColor Cyan
+    Write-Host "Example of a DHCP-Configuration"
+    Write-Host "-Name 'DHCP' -IncludeManagementTools"
+    Write-Host "Add-DhcpServerv4Scope -Name DHCP Scope -StartRange 192.168.10.5"
+    Write-Host "-EndRange 192.168.10.100 -SubnetMask 255.255.255.0"
+    Write-Host "Set-DhcpServerV4OptionValue -DnsServer 192.168.10.2 -Router 192.168.10.1"
+    Write-Host "Set-DhcpServerv4Scope -ScopeId 192.168.10.2 -LeaseDuration 1.00:00:00"
 }
 function New-AddVMToDomain {
     Invoke-Command -VMName $addComputerVMToDomain -Credential $addComputerVMToDomain\Administrator -ScriptBlock {
@@ -245,22 +244,22 @@ function New-AddVMToDomain {
         Rename-Computer -NewName $Using:addComputerVMToDomain -Force
         Start-Sleep -Seconds 2
 
-        Write-Host "Please enter credentials for Domainname\Administrator" -ForegroundColor Cyan
+        Write-Host "Please enter credentials for Domainname\Administrator"
         Add-Computer -DomainName $Using:domainNameToJoin -Credential (Get-Credential)
-        Write-Host "$Using:addComputerVMToDomain successfully joined " -ForegroundColor Cyan
+        Write-Host "$Using:addComputerVMToDomain successfully joined "
         Restart-Computer -Force
     }
 }
 
 function New-MoveFSMORolesAndDecomissionServer {
-    Write-Host "Enter credentials for Domainname\Administrator" -ForegroundColor Cyan
+    Write-Host "Enter credentials for Domainname\Administrator"
     Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
 
     ##move the FSMO-Roles
     Move-ADDirectoryServerOperationMasterRole `
     -OperationMasterRole SchemaMaster,DomainNamingMaster,PDCEmulator,RIDMaster,InfrastructureMaster -Identity $Using:MoveFSMORolesTODC
 
-    Write-Host "Enter Credentials for Windows Server example DC01\Administrator" -ForegroundColor Cyan
+    Write-Host "Enter Credentials for Windows Server example DC01\Administrator"
     #uninstall ADDSDomaincontroller
     Uninstall-ADDSDomainController `
     -Credential (Get-Credential) `
@@ -273,7 +272,7 @@ function New-MoveFSMORolesAndDecomissionServer {
     #uninstall WindowsFeature
     Uninstall-WindowsFeature AD-Domain-Services -IncludeManagementTools
     Restart-Computer -Force -Wait
-    Write-Host "Moved FSMO roles and successfully demoted Server" -ForegroundColor Cyan
+    Write-Host "Moved FSMO roles and successfully demoted Server"
     }
 }
 
@@ -379,13 +378,13 @@ do {
                         $addComputerVMToDomain = Read-Host "Enter VM you want to add to domain"
                         if(Get-VM -Name $addComputerVMToDomain) {
                         $domainNameToJoin = Read-Host "Enter Domainname ex. 'Powershell.local'"
-                        Write-Host "NOTE, before joining a domain you are required to enter the DNS residing for that domain." -ForegroundColor Cyan
+                        Write-Host "NOTE, before joining a domain you are required to enter the DNS residing for that domain."
                         $setDNSVMBeforeJoiningDomain = Read-Host "Please enter the DNS, ex: 192.168.10.2"
                         New-AddVMToDomain
                         Write-Host "Press Enter to cancel Option"
                         } 
                         else {
-                            Write-Host "Virtual Machine [$addComputerVMToDomain] does not exist" -ForegroundColor Cyan
+                            Write-Host "Virtual Machine [$addComputerVMToDomain] does not exist"
                         }
                      }
                 }
@@ -425,7 +424,7 @@ do {
                     $leaseDurationDHCP = Read-Host "Enter DHCP Lease-Duration"
                     New-PCConfigureDHCP
                     } else {
-                    Write-Host "Virtual Machine [$VMName] does not exist" -ForegroundColor Cyan
+                    Write-Host "Virtual Machine [$VMName] does not exist"
                     }
                     } '4' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
@@ -433,7 +432,7 @@ do {
                     if(Get-VM -Name $VMName) {
                     New-AddDCToExistingDomain
                     } else { 
-                    Write-Host "Virtual Machine [$VMName] does not exist" -ForegroundColor Cyan
+                    Write-Host "Virtual Machine [$VMName] does not exist"
                     }
                     } '5' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
@@ -442,7 +441,7 @@ do {
                     if(Get-VM -Name $VMName) {
                     New-MoveFSMORolesAndDecomissionServer
                     } else {
-                    Write-Host "Virtual Machine [$VMName] does not exist" -ForegroundColor Cyan
+                    Write-Host "Virtual Machine [$VMName] does not exist"
                     }
                   }
                 }
@@ -457,8 +456,8 @@ do {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     $chooseVMtoEnterPS = Read-Host "Choose VM to remotely enter PSSession"
                     New-VMPSSessionRemote
-                    Write-Host "Session successfully entered!" -ForegroundColor Cyan
-                    Write-Host "Please exit script to continue your remote session" -ForegroundColor Cyan
+                    Write-Host "Session successfully entered!"
+                    Write-Host "Please exit script to continue your remote session"
                     }
                 }
                 pause
