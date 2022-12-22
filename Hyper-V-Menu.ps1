@@ -334,14 +334,15 @@ function New-ProvisioningDCVM
     )
     Clear-Host
     Write-Host "================ $MenuTitleForEnteringSession ================"
-    Write-Host "1. Choose a VM to enter a Remote PSSession"
+    Write-Host "1: Choose a VM to enter a Remote PSSession"
  }
-
+ 
 do {
     Write-Host "================ Main Menu ==============="
     Write-Host "1: Provision/Manage Virtual Machines"
     Write-Host "2: Configure Domain Services"
     Write-Host "3: Enter Remote Powershell Session"
+    Write-Host "4: Create OUs,Groups and ADUsers"
     Write-Host "Q: Press Q to exit."
 
     $MainMenu = Read-Host "Choose an entrance Or press Q to quit"
