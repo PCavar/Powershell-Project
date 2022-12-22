@@ -154,6 +154,7 @@ function New-PCDCNetworkConfiguration {
     Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
 
         do {
+        Write-Host "Applying settings...."
         ##This disables IPV6 
         Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
         
@@ -166,8 +167,7 @@ function New-PCDCNetworkConfiguration {
 
         Set-DnsClientServerAddress -InterfaceIndex (Get-NetAdapter).InterfaceIndex -ServerAddresses ("$Using:DNSServerClientDCConf")
 
-        Write-Host "Configuring changes please wait..."
-        Start-Sleep -Seconds 2
+        Write-Host "Hold on..."
     } until(Test-Path "C:\Windows\System32")
     
     Rename-Computer -NewName $Using:VMName -Force
@@ -336,7 +336,7 @@ function New-ProvisioningDCVM
     Write-Host "================ $MenuTitleForEnteringSession ================"
     Write-Host "1: Choose a VM to enter a Remote PSSession"
  }
- 
+
 do {
     Write-Host "================ Main Menu ==============="
     Write-Host "1: Provision/Manage Virtual Machines"
