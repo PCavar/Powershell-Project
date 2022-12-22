@@ -1,6 +1,5 @@
 ##NOTE, if somethings bugging and you dont know why, remove the this variable
 ##for trubleshooting! Thanks :)
-$ErrorActionPreference = 'SilentlyContinue'
 
 $VMPath = "C:\VM-Sysprep"
 $ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
@@ -149,36 +148,32 @@ function Install-PCADDS {
         }
 }
 function New-PCDCNetworkConfiguration {
+
+    Start-Sleep -Seconds 10
+
     Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
 
-        Set-NetIPInterface `
-        -InterfaceAlias (Get-NetAdapter).InterfaceAlias `
-        -AddressFamily IPv4 `
-        -IPAddress $Using:IPAddressDCConf `
-        -PrefixLength $Using:preFixLengthDCConf `
-        -DefaultGateway $Using:defaultGatewayDCConf
-
-       <# New-NetIPAddress `
-         -IPAddress $Using:IPAddressDCConf `
-         -InterfaceAlias (Get-NetAdapter).InterfaceAlias `
-         -DefaultGateway $Using:defaultGatewayDCConf `
-         -PrefixLength $Using:preFixLengthDCConf `
-        #>
-
-        Start-Sleep -Seconds 2
-
-        Set-DnsClient -InterfaceAlias (Get-NetAdapter).InterfaceAlias -ServerAddresses ("$Using:DNSServerClientDCConf")
+        do {
         ##This disables IPV6 
         Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
+        
+        New-NetIPAddress `
+         -IPAddress $Using:IPAddressDCConf `
+         -PrefixLength $Using:preFixLengthDCConf `
+         -InterfaceIndex (Get-NetAdapter).InterfaceIndex `
+         -DefaultGateway $Using:defaultGatewayDCConf `
+         -AddressFamily IPv4
 
-        Start-Sleep -Seconds 2
-        Write-Host "Configuration Completed!"
-        Start-Sleep -Seconds 2
+        Set-DnsClientServerAddress -InterfaceIndex (Get-NetAdapter).InterfaceIndex -ServerAddresses ("$Using:DNSServerClientDCConf")
 
-        Rename-Computer -NewName $Using:VMName -Force
+        Write-Host "Configuring changes please wait..."
         Start-Sleep -Seconds 2
-        Write-Host "Computer restarted and setting successfully applied!"
-        Restart-Computer -Force
+    } until(Test-Path "C:\Windows\System32")
+    
+    Rename-Computer -NewName $Using:VMName -Force
+    Start-Sleep -Seconds 2
+    Write-Host "Computer restarted and setting successfully applied!"
+    Restart-Computer -Force
     }
 }
 
