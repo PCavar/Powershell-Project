@@ -325,7 +325,6 @@ function New-ProvisioningDCVM
     Write-Host "1: Configure IP/DNS/Gateway"
     Write-Host "2: Install AD/DS Roles on Windows Server"
     Write-Host "3: Configure DHCP on Windows Server"
-    Write-Host "4: Join a Server to existing Domain"
     Write-Host "5: Move FSMO-Roles and Decomission Windows Server"
  }
 
