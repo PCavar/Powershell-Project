@@ -53,7 +53,7 @@ param (
     Enable-VMIntegrationService -VMName $VMName -Name "Guest Service Interface" -Verbose
     Set-VM -VMName $VMName -AutomaticCheckpointsEnabled $false -CheckpointType Disabled -Verbose
   
-    Write-Host "[$($VMName)] created"
+    Write-Host "$VMName created" -ForegroundColor Yellow
     Start-VM $VMName
     } else {
         Write-Host "$VMName already exists!" -ForegroundColor Yellow
