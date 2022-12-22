@@ -139,7 +139,7 @@ function Install-PCADDS {
             Write-Verbose "Successfully Configured AD Services"
 
             Start-Sleep -Seconds 5
-            Restart-Computer -Wait
+            Restart-Computer -Force
             Write-Host "Computer restarted and configuration successfully applied!"
 
         } else {  
