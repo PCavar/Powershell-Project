@@ -16,7 +16,6 @@ param (
     [Parameter(Mandatory)]
     [ValidateSet("Server","Client")]$MachineType
 )
-
     if((-not(Get-VM $VMName -ErrorAction SilentlyContinue).Name) -eq $VMName) {
 
         if ($MachineType -like "Server") {
@@ -92,7 +91,7 @@ function New-PCCheckVMStatusOn {
         Get-VM $VMName | Start-VM -Verbose
         Write-Host "$VMName is now up and Running!"
     } else {
-        Write-Host "Virtual Machine $VMName does not exist"
+        Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
     }
 }
 function New-PCCheckVMStatusOff {
@@ -104,7 +103,7 @@ function New-PCCheckVMStatusOff {
         Get-VM -Name $VMName | Stop-VM -Force:$true
         Write-Host "$VMName is now turned Off"
     } else {
-        Write-Host "Virtual Machine $VMName does not exist"
+        Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
     }
 }
 function Install-PCADDS {
@@ -135,13 +134,11 @@ function Install-PCADDS {
             -NoRebootOnCompletion:$false `
             -Force:$true
             
-            Write-Verbose "Configuration Succeded!"
-            Write-Verbose "Applying settings..."
-            Write-Verbose "Successfully Configured AD Services"
+            Write-Host "Successfully Configured AD Services" -ForegroundColor Cyan
 
             Start-Sleep -Seconds 5
             Restart-Computer -Force
-            Write-Host "Computer restarted and configuration successfully applied!"
+            Write-Host "Computer restarted and configuration successfully applied!" -ForegroundColor Cyan
 
         } else {  
             Write-Verbose "Mstile.se already exists!"
@@ -155,7 +152,7 @@ function New-PCDCNetworkConfiguration {
     Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
 
         do {
-        Write-Host "Applying settings...."
+        Write-Host "Applying settings...." -ForegroundColor Yellow
         ##This disables IPV6 
         Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
         
@@ -173,7 +170,7 @@ function New-PCDCNetworkConfiguration {
     
     Rename-Computer -NewName $Using:VMName -Force
     Start-Sleep -Seconds 2
-    Write-Host "Computer restarted and setting successfully applied!"
+    Write-Host "Computer restarted and setting successfully applied!" -ForegroundColor Yellow
     Restart-Computer -Force
     }
 }
@@ -242,19 +239,12 @@ function New-ExampleOfDHCPConf {
 }
 function New-AddVMToDomain {
     Invoke-Command -VMName $addComputerVMToDomain -Credential $addComputerVMToDomain\Administrator -ScriptBlock {
-        ##This disables IPV6 
-        Get-NetAdapterBinding -Name (Get-NetAdapter).Name -ComponentID 'ms_tcpip6' | Disable-NetAdapterBinding -Verbose
-        Start-Sleep -Seconds 3
-        
-        Set-DnsClientServerAddress -InterfaceIndex (Get-DnsClientServerAddress).InterfaceIndex -ServerAddresses $Using:setDNSVMBeforeJoiningDomain
-        Start-Sleep -Seconds 3
-
         Rename-Computer -NewName $Using:addComputerVMToDomain -Force
         Start-Sleep -Seconds 2
 
-        Write-Host "Please enter credentials for Domainname\Administrator"
+        Write-Host "Please enter credentials for Domainname\Administrator" -ForegroundColor Yellow
         Add-Computer -DomainName $Using:domainNameToJoin -Credential (Get-Credential)
-        Write-Host "$Using:addComputerVMToDomain successfully joined "
+        Write-Host "$Using:addComputerVMToDomain successfully joined " -ForegroundColor Yellow
         Restart-Computer -Force
     }
 }
@@ -302,7 +292,7 @@ function New-DCMENU
     Write-Host "3: Turnoff a VM"
     Write-Host "4: Remove a VM"
     Write-Host "5: Provision a new VM"
-    Write-Host "6: Add VM to Domain"
+    Write-Host "6: Add Windows 10 Client to Domain"
 }
 function New-ProvisioningDCVM
  { 
@@ -325,6 +315,7 @@ function New-ProvisioningDCVM
     Write-Host "1: Configure IP/DNS/Gateway"
     Write-Host "2: Install AD/DS Roles on Windows Server"
     Write-Host "3: Configure DHCP on Windows Server"
+    Write-Host "4: Choose Windows Server to join existing Domain"
     Write-Host "5: Move FSMO-Roles and Decomission Windows Server"
  }
 
@@ -342,7 +333,6 @@ do {
     Write-Host "1: Provision/Manage Virtual Machines"
     Write-Host "2: Configure Domain Services"
     Write-Host "3: Enter Remote Powershell Session"
-    Write-Host "4: Create OUs,Groups and ADUsers"
     Write-Host "Q: Press Q to exit."
 
     $MainMenu = Read-Host "Choose an entrance Or press Q to quit"
@@ -383,13 +373,11 @@ do {
                         } until($DCVMProvision -eq 'B')
                      } '6' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                        $addComputerVMToDomain = Read-Host "Enter VM you want to add to domain"
+                        $addComputerVMToDomain = Read-Host "Enter Windows Client to add to Domain"
                         if(Get-VM -Name $addComputerVMToDomain) {
-                        $domainNameToJoin = Read-Host "Enter Domainname ex. 'Powershell.local'"
-                        Write-Host "NOTE, before joining a domain you are required to enter the DNS residing for that domain."
-                        $setDNSVMBeforeJoiningDomain = Read-Host "Please enter the DNS, ex: 192.168.10.2"
+                        $domainNameToJoin = Read-Host "Enter Domainname ex. 'mstile.se'"
+                        Write-Host "NOTE, before joining a domain you are required to Configure the DNS residing for that domain." -ForegroundColor Yellow
                         New-AddVMToDomain
-                        Write-Host "Press Enter to cancel Option"
                         } 
                         else {
                             Write-Host "Virtual Machine [$addComputerVMToDomain] does not exist"
@@ -438,7 +426,7 @@ do {
                     }
                     } '4' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                    $VMName = Read-Host "Enter DC to join Domain"
+                    $VMName = Read-Host "Enter Windows Server to join Domain"
                     $DomainNameForDomainController = Read-Host "Enter DomainName ex mstile.se"
                     $enterReplicationSourceDC = Read-Host "Enter DomainController ex DC01.mstile.se"
                     if(Get-VM -Name $VMName) {
