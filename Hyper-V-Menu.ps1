@@ -134,11 +134,11 @@ function Install-PCADDS {
             -NoRebootOnCompletion:$false `
             -Force:$true
             
-            Write-Host "Successfully Configured AD Services" -ForegroundColor Cyan
+            Write-Host "Successfully Configured AD Services" -ForegroundColor Yellow
 
             Start-Sleep -Seconds 5
             Restart-Computer -Force
-            Write-Host "Computer restarted and configuration successfully applied!" -ForegroundColor Cyan
+            Write-Host "Computer restarted and configuration successfully applied!" -ForegroundColor Yellow
 
         } else {  
             Write-Verbose "Mstile.se already exists!"
