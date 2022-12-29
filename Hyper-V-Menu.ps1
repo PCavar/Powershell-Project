@@ -228,15 +228,6 @@ function New-ExampleOfIpDnsRouterConf {
     Write-Host "PrefixLength/Subnet Value: 24"
     Write-Host "DNS ServerClient Value: 192.168.10.2"
 }
-
-function New-ExampleOfDHCPConf {
-    Write-Host "Example of a DHCP-Configuration"
-    Write-Host "-Name 'DHCP' -IncludeManagementTools"
-    Write-Host "Add-DhcpServerv4Scope -Name DHCP Scope -StartRange 192.168.10.5"
-    Write-Host "-EndRange 192.168.10.100 -SubnetMask 255.255.255.0"
-    Write-Host "Set-DhcpServerV4OptionValue -DnsServer 192.168.10.2 -Router 192.168.10.1"
-    Write-Host "Set-DhcpServerv4Scope -ScopeId 192.168.10.2 -LeaseDuration 1.00:00:00"
-}
 function New-AddVMToDomain {
     Invoke-Command -VMName $addComputerVMToDomain -Credential $addComputerVMToDomain\Administrator -ScriptBlock {
         Rename-Computer -NewName $Using:addComputerVMToDomain -Force
@@ -314,8 +305,8 @@ function New-ProvisioningDCVM
     
     Write-Host "1: Configure IP/DNS/Gateway"
     Write-Host "2: Install AD/DS Roles on Windows Server"
-    Write-Host "3: Configure DHCP on Windows Server"
-    Write-Host "4: Choose Windows Server to join existing Domain"
+    Write-Host "3: Join a existing domain"
+    Write-Host "4: Join existing Domain as a Domain Controller with Replication"
     Write-Host "5: Move FSMO-Roles and Decomission Windows Server"
  }
 
@@ -345,18 +336,22 @@ do {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                      } '2' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "Press enter to cancel" -ForegroundColor Yellow
                         $VMName = Read-Host "Which VM would you like to start?"
                         New-PCCheckVMStatusOn
                      } '3' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "Press enter to cancel" -ForegroundColor Yellow
                         $VMName = Read-Host "Which VM would you like to turn off?"
                         New-PCCheckVMStatusOff
                      } '4' {             
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "Press enter to cancel" -ForegroundColor Yellow
                         $VMName = Read-Host "Which Virtual Machine do you want to remove?"
                         Remove-PCVM -VMName $VMName  -Verbose
                      } '5' {
                         do { New-ProvisioningDCVM
+                            Write-Host "Press enter to cancel" -ForegroundColor Yellow
                             $DCVMProvision = Read-Host "Choose an entrance or Press B for Back"
                             switch($DCVMProvision) {
                                '1' {
@@ -373,6 +368,7 @@ do {
                         } until($DCVMProvision -eq 'B')
                      } '6' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "Press enter to cancel" -ForegroundColor Yellow
                         $addComputerVMToDomain = Read-Host "Enter Windows Client to add to Domain"
                         if(Get-VM -Name $addComputerVMToDomain) {
                         $domainNameToJoin = Read-Host "Enter Domainname ex. 'mstile.se'"
@@ -401,6 +397,7 @@ do {
                     New-PCDCNetworkConfiguration
                     } '2' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    Write-Host "Press enter to cancel" -ForegroundColor Yellow
                     Write-Host "This Option Installes AD/DS on a Windows Server" -ForegroundColor Yellow
                     $VMName = Read-Host "Enter DC to install AD/DS Services"
                     $DomainNameForDomainController = Read-Host "Enter DomainName ex mstile.se"
@@ -408,24 +405,19 @@ do {
                     Install-PCADDS -Verbose
                     } '3' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                    New-ExampleOfDHCPConf
-                    Write-Host "Comming soon" -ForegroundColor Yellow
-                    $VMName = Read-Host "Enter DC to Configure DHCP-Scope"
-                    if(Get-VM -Name $VMName) {
-                    $NameOfDCHPScope = Read-Host "Name of DCHP-Scope"
-                    $startOfDCHPScope = Read-Host "Start of DHCP-Scope"
-                    $endOfDHCPScope = Read-Host "End of DCHP-Scope"
-                    $subnetmaskDCHPScope = Read-Host "Enter SubnetMask"
-                    $setDNSDHCP = Read-Host "Enter DNS"
-                    $routerDHCP = Read-Host "Enter router IP"
-                    $enterDHCPScopeId = Read-Host "Enter DHCP Scope ID"
-                    $leaseDurationDHCP = Read-Host "Enter DHCP Lease-Duration"
-                    New-PCConfigureDHCP
-                    } else {
-                    Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                    Write-Host "Press enter to cancel" -ForegroundColor Yellow
+                    $addComputerVMToDomain = Read-Host "Enter VM to ad to domain"
+                    if(Get-VM -Name $addComputerVMToDomain) {
+                    $domainNameToJoin = Read-Host "Enter Domainname ex. 'mstile.se'"
+                    Write-Host "NOTE, before joining a domain you are required to Configure the DNS residing for that domain." -ForegroundColor Yellow
+                    New-AddVMToDomain
+                    } 
+                    else {
+                    Write-Host "Virtual Machine [$addComputerVMToDomain] does not exist" -ForegroundColor Yellow
                     }
                     } '4' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    Write-Host "Press enter to cancel" -ForegroundColor Yellow
                     $VMName = Read-Host "Enter Windows Server to join Domain"
                     $DomainNameForDomainController = Read-Host "Enter DomainName ex mstile.se"
                     $enterReplicationSourceDC = Read-Host "Enter DomainController ex DC01.mstile.se"
@@ -436,6 +428,7 @@ do {
                     }
                     } '5' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    Write-Host "Press enter to cancel" -ForegroundColor Yellow
                     $VMName = Read-Host "Enter Windows Server DC you want to move FSMO-Roles from and decomission"
                     $MoveFSMORolesTODC = "Enter target Server To move Roles to"
                     if(Get-VM -Name $VMName) {
@@ -454,6 +447,7 @@ do {
                 switch($enterPSSessionVM){
                 '1' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    Write-Host "Press enter to cancel" -ForegroundColor Yellow
                     $chooseVMtoEnterPS = Read-Host "Choose VM to remotely enter PSSession"
                     New-VMPSSessionRemote
                     Write-Host "Session successfully entered!" -ForegroundColor Yellow
