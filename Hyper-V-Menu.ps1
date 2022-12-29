@@ -175,6 +175,29 @@ function New-PCDCNetworkConfiguration {
     }
 }
 
+function New-PCDCOnlyInstallADDS {
+    Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
+        
+        if($env:COMPUTERNAME -eq $env:USERDOMAIN) {
+        
+            ##config Active-Directory
+            Install-WindowsFeature AD-Domain-Services
+            Install-WindowsFeature RSAT-AD-PowerShell
+            Install-WindowsFeature RSAT-ADDS
+        
+            Import-Module ADDSDeployment
+            Write-Host "Successfully Configured AD Services" -ForegroundColor Yellow
+
+            Start-Sleep -Seconds 5
+            Restart-Computer -Force
+            Write-Host "Computer restarted and configuration successfully applied!" -ForegroundColor Yellow
+
+        } else {  
+            Write-Verbose "Mstile.se already exists!"
+            }
+        }
+}
+
 function New-PCConfigureDHCP {
     Invoke-Command -VMName $vmName -Credential (Get-Credential) {
         Install-WindowsFeature -Name 'DHCP' -IncludeManagementTools
@@ -304,10 +327,11 @@ function New-ProvisioningDCVM
     Write-Host "================ $TitleDCConfig ================"
     
     Write-Host "1: Configure IP/DNS/Gateway"
-    Write-Host "2: Install AD/DS Roles on Windows Server"
+    Write-Host "2: Install AD/DS Roles and Domain on Windows Server"
     Write-Host "3: Join a existing domain"
     Write-Host "4: Join existing Domain as a Domain Controller with Replication"
     Write-Host "5: Move FSMO-Roles and Decomission Windows Server"
+    Write-Host "6: Configure AD/DS on Server, not joining domain or being a DC"
  }
 
  function New-DCVMSessionEnterer {
@@ -433,6 +457,15 @@ do {
                     $MoveFSMORolesTODC = "Enter target Server To move Roles to"
                     if(Get-VM -Name $VMName) {
                     New-MoveFSMORolesAndDecomissionServer
+                    } else {
+                    Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                    }
+                  } '6' {
+                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    Write-Host "Press enter to cancel" -ForegroundColor Yellow
+                    $VMName = Read-Host "Name of Server to install AD/DS"
+                    if(Get-VM -Name $VMName) {
+                    New-PCDCOnlyInstallADDS
                     } else {
                     Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
                     }
