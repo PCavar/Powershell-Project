@@ -413,7 +413,7 @@ do {
                    '1' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     New-ExampleOfIpDnsRouterConf
-                    $VMName = Read-Host "Enter DC to configure IP/DNS/Gateway"
+                    $VMName = Read-Host "Enter VM to configure IP/DNS/Gateway"
                     $IPAddressDCConf = Read-Host "Enter Value for IP-Address"
                     $defaultGatewayDCConf = Read-Host "Enter Value for Gateway/Router"
                     $preFixLengthDCConf = Read-Host "Enter Value For Prefix length"
