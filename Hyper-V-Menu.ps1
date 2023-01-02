@@ -346,7 +346,7 @@ function New-ProvisioningDCVM
     Write-Host "3: Join a existing domain"
     Write-Host "4: Join existing Domain as a Domain Controller with Replication"
     Write-Host "5: Move FSMO-Roles and Decomission Windows Server"
-    Write-Host "6: Configure AD/DS on Server, not joining domain or being a DC"
+    Write-Host "6: Configure AD/DS on Server, Join Domain but not as a DC"
  }
 
  function New-DCVMSessionEnterer {
