@@ -263,6 +263,21 @@ function New-AddVMToDomain {
     }
 }
 
+Function New-AddServerToDomain {
+    Invoke-Command -VMName $addComputerVMToDomain -Credential $addComputerVMToDomain\Administrator -ScriptBlock {
+
+        ##config Active-Directory
+        Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
+        Install-WindowsFeature RSAT-AD-PowerShell
+        Install-WindowsFeature RSAT-ADDS
+
+        Write-Host "Please enter credentials for DomainName\Administrator" -ForegroundColor Yellow
+        Add-Computer -DomainName $Using:domainNameToJoin -Credential (Get-Credential)
+        Write-Host "$Using:addComputerVMToDomain successfully joined " -ForegroundColor Yellow
+        Restart-Computer -Force
+    }
+}
+
 function New-MoveFSMORolesAndDecomissionServer {
     Write-Host "Enter credentials for Domainname\Administrator" -ForegroundColor Yellow
     Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
@@ -397,7 +412,7 @@ do {
                         if(Get-VM -Name $addComputerVMToDomain) {
                         $domainNameToJoin = Read-Host "Enter Domainname ex. 'mstile.se'"
                         Write-Host "NOTE, before joining a domain you are required to Configure the DNS residing for that domain." -ForegroundColor Yellow
-                        New-AddVMToDomain
+                        New-AddServerToDomain
                         } 
                         else {
                             Write-Host "Virtual Machine [$addComputerVMToDomain] does not exist" -ForegroundColor Yellow
