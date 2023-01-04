@@ -327,11 +327,21 @@ function New-ProvisioningDCVM
     Write-Host "================ $TitleDCConfig ================"
     
     Write-Host "1: Configure IP/DNS/Gateway"
-    Write-Host "2: Install AD/DS Roles and Domain on Windows Server"
-    Write-Host "3: Join a existing domain"
-    Write-Host "4: Join existing Domain as a Domain Controller with Replication"
-    Write-Host "5: Move FSMO-Roles and Decomission Windows Server"
-    Write-Host "6: Configure AD/DS on Server"
+    Write-Host "2: Add Roles and Features for a server"
+    Write-Host "3: Join a existing domain Windows Server or Windows 10 Pro"
+ }
+ function New-DCConfigurationsSubMenu
+ { 
+     param (
+         [string]$TitleDCConfigurationsSubMenu = 'Add Roles and Features to Windows Server'
+     )
+     Clear-Host
+     Write-Host "================ $TitleDCConfigurationsSubMenu ================"
+     
+     Write-Host "1: Install AD/DS Roles and Domain Controller on Windows Server"
+     Write-Host "2: Install AD/DS on Windows Server"
+     Write-Host "3: Join existing Domain as a Domain Controller with Replication"
+     Write-Host "4: Move FSMO-Roles and Decomission Windows Server"
  }
 
  function New-DCVMSessionEnterer {
@@ -408,14 +418,48 @@ do {
                     $DNSServerClientDCConf = Read-Host "Enter a value for DNS-Address"
                     New-PCDCNetworkConfiguration
                     } '2' {
-                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                    Write-Host "Press enter to cancel" -ForegroundColor Yellow
-                    Write-Host "This Option Installes AD/DS on a Windows Server" -ForegroundColor Yellow
-                    $VMName = Read-Host "Enter DC to install AD/DS Services"
-                    $DomainNameForDomainController = Read-Host "Enter DomainName ex mstile.se"
-                    $netBIOSNameDC = Read-Host "Enter NetBios Name ex MSTILE"
-                    Install-PCADDS -Verbose
-                    } '3' {
+                        do { New-DCConfigurationsSubMenu
+                            $TitleDCConfigurationsSubMenu = Read-Host "Choose an entrance or Press B for Back"
+                            switch($TitleDCConfigurationsSubMenu) {
+                               '1' {
+                                Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                                Write-Host "Press enter to cancel" -ForegroundColor Yellow
+                                Write-Host "This Option Installes AD/DS on a Windows Server" -ForegroundColor Yellow
+                                $VMName = Read-Host "Enter DC to install AD/DS Services"
+                                $DomainNameForDomainController = Read-Host "Enter DomainName ex mstile.se"
+                                $netBIOSNameDC = Read-Host "Enter NetBios Name ex MSTILE"
+                                Install-PCADDS -Verbose
+                                } '2' {
+                                Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                                $VMName = Read-Host "Enter name of the VM you want to provision"
+                                New-PCVM -VMName $VMName -MachineType Client
+                                } '3' {
+                                Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                                Write-Host "Press enter to cancel" -ForegroundColor Yellow
+                                $VMName = Read-Host "Enter Windows Server to join Domain"
+                                $DomainNameForDomainController = Read-Host "Enter DomainName ex mstile.se"
+                                $enterReplicationSourceDC = Read-Host "Enter DomainController ex DC01.mstile.se"
+                                if(Get-VM -Name $VMName) {
+                                New-AddDCToExistingDomain
+                                } else { 
+                                Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                                }
+                                } '4' {
+                                Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                                Write-Host "Press enter to cancel" -ForegroundColor Yellow
+                                $VMName = Read-Host "Enter Windows Server DC you want to move FSMO-Roles from and decomission"
+                                $MoveFSMORolesTODC = "Enter target Server To move Roles to"
+                                if(Get-VM -Name $VMName) {
+                                New-MoveFSMORolesAndDecomissionServer
+                                } else {
+                                Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                                }
+                                }
+                            }
+                            pause
+                        } until($TitleDCConfigurationsSubMenu -eq 'B')
+                     }
+                     '3' {
                     Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                     Write-Host "Press enter to cancel" -ForegroundColor Yellow
                     $addComputerVMToDomain = Read-Host "Enter VM to ad to domain"
@@ -427,37 +471,7 @@ do {
                     else {
                     Write-Host "Virtual Machine [$addComputerVMToDomain] does not exist" -ForegroundColor Yellow
                     }
-                    } '4' {
-                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                    Write-Host "Press enter to cancel" -ForegroundColor Yellow
-                    $VMName = Read-Host "Enter Windows Server to join Domain"
-                    $DomainNameForDomainController = Read-Host "Enter DomainName ex mstile.se"
-                    $enterReplicationSourceDC = Read-Host "Enter DomainController ex DC01.mstile.se"
-                    if(Get-VM -Name $VMName) {
-                    New-AddDCToExistingDomain
-                    } else { 
-                    Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
                     }
-                    } '5' {
-                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                    Write-Host "Press enter to cancel" -ForegroundColor Yellow
-                    $VMName = Read-Host "Enter Windows Server DC you want to move FSMO-Roles from and decomission"
-                    $MoveFSMORolesTODC = "Enter target Server To move Roles to"
-                    if(Get-VM -Name $VMName) {
-                    New-MoveFSMORolesAndDecomissionServer
-                    } else {
-                    Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
-                    }
-                  } '6' {
-                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
-                    Write-Host "Press enter to cancel" -ForegroundColor Yellow
-                    $VMName = Read-Host "Name of Server to install AD/DS"
-                    if(Get-VM -Name $VMName) {
-                    New-PCDCOnlyInstallADDS
-                    } else {
-                    Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
-                    }
-                  }
                 }
                 pause  
             } until ($WindowsServerADConfigMenu -eq 'B')
