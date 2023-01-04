@@ -20,6 +20,8 @@ Third represents parent path where a new copy from the Windows 10 template(.VHDX
 Requirements for this to work without any hassle is a SysPrep WS2012-2022 for DC/AD And Windows 10 Pro(Clients) for VMs.(I'm using .VHDX)
 Recommended to use Powershell Core 7.3.0 and higher.
 NOTE: As you are managing Hyper-V with provisioning, elevated accessrights(admin) are required.
+To be clear, you will also need ISO files for the OS Windows Server/Windows 10 Pro. If you choose 2012,2016,2019 or even 2022 for server it's up to you! (Some feature might be working better for newer versions). 
+
 
 I am will continue push for commits and expand the functionality while keeping it 100% powershell based. Thanks!
 
