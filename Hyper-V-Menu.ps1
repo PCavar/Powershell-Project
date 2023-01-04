@@ -446,6 +446,7 @@ do {
                                     }
                                 } '2' {
                                 Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                                Write-Host "Press enter to cancel" -ForegroundColor Yellow
                                 $VMName = Read-Host "Enter name of the Windows Server to install AD/DS"
                                 if(Get-VM -Name $VMName) {
                                     New-PCDCOnlyInstallADDS
