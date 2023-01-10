@@ -292,6 +292,35 @@ function New-VMPSSessionRemote {
     $savePSSessionVM = New-PSSession -VMName $chooseVMtoEnterPS -Credential(Get-Credential)
     Enter-PSSession $savePSSessionVM 
 }
+
+function New-DHCPServerConfigurationWindows {
+    Write-Host "Enter credentials for Domainname\Administrator" -ForegroundColor Yellow
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+
+    Install-WindowsFeature -Name 'DHCP' –IncludeManagementTools
+
+    Add-DhcpServerV4Scope `
+    -Name "DHCP Scope" `
+    -StartRange $Using:configureDHCPForWindowsServerStartRange `
+    -EndRange $Using:configureDHCPForWindowsServerEndRange `
+    -SubnetMask $Using:configureDHCPForWindowsServerSubnetMask 
+
+    Set-DhcpServerV4OptionValue `
+    -DnsServer $Using:configureDHCPForWindowsServerDnsServer `
+    -Router $Using:configureDHCPForWindowsServer
+
+    Set-DhcpServerv4Scope `
+    -ScopeId 192.168.10.2 `
+    -LeaseDuration 1.00:00:00
+
+    Restart-service dhcpserver
+
+    Start-Sleep -Seconds 10
+
+    Restart-Computer -Force
+    }
+}
+
 #Domain Controllers Main Menu
 function New-DCMENU
 {
@@ -306,7 +335,6 @@ function New-DCMENU
     Write-Host "3: Turnoff a VM"
     Write-Host "4: Remove a VM"
     Write-Host "5: Provision a new VM"
-    Write-Host "6: Add Windows 10 Client to Domain"
 }
 function New-ProvisioningDCVM
  { 
@@ -338,10 +366,11 @@ function New-ProvisioningDCVM
      Clear-Host
      Write-Host "================ $TitleDCConfigurationsSubMenu ================"
      
-     Write-Host "1: Install AD/DS Roles and Domain Controller on Windows Server"
+     Write-Host "1: Install AD/DS Roles and make it a Domain Controller"
      Write-Host "2: Install AD/DS on Windows Server"
      Write-Host "3: Join existing Domain as a Domain Controller with Replication"
      Write-Host "4: Move FSMO-Roles and Decomission Windows Server"
+     Write-Host "5: Install & Configure DCHP"
  }
 
  function New-DCVMSessionEnterer {
@@ -474,6 +503,21 @@ do {
                                 } else {
                                 Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
                                 }
+                                } '5' {
+                                Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                                Write-Host "Press enter to cancel" -ForegroundColor Yellow
+                                $VMName = Read-Host "Enter target Server to configure DHCP"
+                                if(Get-VM -Name $VMName) {
+                                $configureDHCPForWindowsServerStartRange = Read-Host "Starting Range"
+                                $configureDHCPForWindowsServerEndRange = Read-Host "End Range"
+                                $configureDHCPForWindowsServerSubnetMask = Read-Host "Subnet Mask"
+                                $configureDHCPForWindowsServerDnsServer = Read-Host "DNS"
+                                $configureDHCPForWindowsServer = Read-Host "Router"
+                                New-DHCPServerConfigurationWindows
+                                } else {
+                                Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                                }
+
                                 }
                             }
                             pause
