@@ -247,7 +247,6 @@ function New-ExampleOfIpDnsRouterConf {
     Write-Host "Example of a configuration"
     Write-Host "IPAddress Value: 192.168.10.2"
     Write-Host "DefaultGateway Value: 192.168.10.1"
-    Write-Host "InterfaceAlias Value:" (Get-NetAdapter).InterfaceAlias
     Write-Host "PrefixLength/Subnet Value: 24"
     Write-Host "DNS ServerClient Value: 192.168.10.2"
 }
