@@ -141,7 +141,7 @@ function Install-PCADDS {
             Write-Host "Computer restarted and configuration successfully applied!" -ForegroundColor Yellow
 
         } else {  
-            Write-Verbose "Mstile.se already exists!"
+            Write-Verbose "Domain already exists!"
             }
         }
 }
@@ -228,7 +228,7 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
     -AllowDomainControllerReinstall:$true `
     -NoGlobalCatalog:$false `
     -CreateDnsDelegation:$false `
-    -Credential (Get-Credential MSTILE\Administrator) `
+    -Credential (Get-Credential) `
     -CriticalReplicationOnly:$false `
     -SiteName "Default-First-Site-Name" `
     -DomainName $Using:DomainNameForDomainController `
