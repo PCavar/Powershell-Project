@@ -1,6 +1,6 @@
 ##NOTE, if somethings bugging and you dont know why, remove the this variable
 ##for trubleshooting! Thanks :)
-$ErrorActionPreference = 'SilentlyContinue'
+<#$ErrorActionPreference = 'SilentlyContinue' #>
 
 $VMPath = "C:\VM-Sysprep"
 $ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
@@ -298,25 +298,33 @@ function New-DHCPServerConfigurationWindows {
 
     Install-WindowsFeature -Name 'DHCP' –IncludeManagementTools
 
-    Add-DhcpServerV4Scope `
-    -Name "DHCP Scope" `
-    -StartRange $Using:configureDHCPForWindowsServerStartRange `
-    -EndRange $Using:configureDHCPForWindowsServerEndRange `
-    -SubnetMask $Using:configureDHCPForWindowsServerSubnetMask 
-
-    Set-DhcpServerV4OptionValue `
-    -DnsServer $Using:configureDHCPForWindowsServerDnsServer `
-    -Router $Using:configureDHCPForWindowsServer
-
-    Set-DhcpServerv4Scope `
-    -ScopeId 192.168.10.2 `
-    -LeaseDuration 1.00:00:00
-
     Restart-service dhcpserver
 
     Start-Sleep -Seconds 10
 
     Restart-Computer -Force
+    }
+}
+
+function New-DHCPConfigurationInstallment {
+    Write-Host "Enter credentials for Domainname\Administrator" -ForegroundColor Yellow
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+
+    Add-DhcpServerv4Scope `
+    -name "$Using:ScopeNameDHCP" `
+    -StartRange $Using:configureDHCPForWindowsServerStartRange `
+    -EndRange $Using:configureDHCPForWindowsServerEndRange `
+    -SubnetMask $Using:subnetmaskConf
+
+    Set-DhcpServerv4OptionValue `
+    -ScopeId $Using:ScopeIdDHCP `
+    -Router $Using:RouterDHCPVm `
+    -DnsServer $Using:DNSServerDHCP `
+    -DnsDomain "$Using:DomainNameDHCP"
+
+    Set-DhcpServerv4Scope `
+    -ScopeId $Using:ScopeIdDHCP `
+    -LeaseDuration 1.00:00:00
     }
 }
 function New-PCDCFunctionExportVM {
@@ -378,7 +386,8 @@ function New-ProvisioningDCVM
      Write-Host "2: Install AD/DS on Windows Server"
      Write-Host "3: Join existing Domain as a Domain Controller with Replication"
      Write-Host "4: Move FSMO-Roles and Decomission Windows Server"
-     Write-Host "5: Install & Configure DCHP"
+     Write-Host "5: Install DCHP on Server"
+     Write-Host "6: Configure DHCP"
  }
 
  function New-DCVMSessionEnterer {
@@ -514,18 +523,29 @@ do {
                                 } '5' {
                                 Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                                 Write-Host "Press enter to cancel" -ForegroundColor Yellow
-                                $VMName = Read-Host "Enter target Server to configure DHCP"
+                                $VMName = Read-Host "Enter target Server to Install DHCP Services"
                                 if(Get-VM -Name $VMName) {
-                                $configureDHCPForWindowsServerStartRange = Read-Host "Starting Range"
-                                $configureDHCPForWindowsServerEndRange = Read-Host "End Range"
-                                $configureDHCPForWindowsServerSubnetMask = Read-Host "Subnet Mask"
-                                $configureDHCPForWindowsServerDnsServer = Read-Host "DNS"
-                                $configureDHCPForWindowsServer = Read-Host "Router"
                                 New-DHCPServerConfigurationWindows
                                 } else {
                                 Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
                                 }
-
+                                } '6' {
+                                Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                                Write-Host "Press enter to cancel" -ForegroundColor Yellow
+                                $VMName = Read-Host "Enter target Server to configure DHCP"
+                                if(Get-VM -Name $VMName) {
+                                $ScopeNameDHCP = Read-Host "Enter name for the Scope"
+                                $configureDHCPForWindowsServerStartRange = Read-Host "Starting Range"
+                                $configureDHCPForWindowsServerEndRange = Read-Host "End Range"
+                                $subnetmaskConf = Read-Host "Enter Subnet (ex 255.255.255.0)"
+                                $ScopeIdDHCP = Read-Host "Enter ScopeID"
+                                $RouterDHCPVm = Read-Host "Enter Default Gateway"
+                                $DNSServerDHCP = Read-Host "Enter IP for DNS-Server"
+                                $DomainNameDHCP = Read-Host "Enter Domain-Name for server"
+                                New-DHCPConfigurationInstallment
+                                } else {
+                                Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                                }
                                 }
                             }
                             pause
