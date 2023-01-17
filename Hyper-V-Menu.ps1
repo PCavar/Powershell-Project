@@ -319,6 +319,14 @@ function New-DHCPServerConfigurationWindows {
     Restart-Computer -Force
     }
 }
+function New-PCDCFunctionExportVM {
+    Export-VM `
+    -Name $chooseVmOrDCToExportDisk `
+    -Path $pathForExportedVMOrDC 
+
+    Write-Host "VM Exported successfully!" -ForegroundColor Yellow
+    Write-Host "Location $pathForExportedVMOrDC\$chooseVmOrDCToExportDisk" -ForegroundColor Yellow
+}
 
 #Domain Controllers Main Menu
 function New-DCMENU
@@ -356,6 +364,7 @@ function New-ProvisioningDCVM
     Write-Host "1: Configure IP/DNS/Gateway"
     Write-Host "2: Add Roles and Features for a server"
     Write-Host "3: Join a existing Domain"
+    Write-Host "4: Export a VM to choosen folder"
  }
  function New-DCConfigurationsSubMenu
  { 
@@ -534,6 +543,18 @@ do {
                     else {
                     Write-Host "Virtual Machine [$addComputerVMToDomain] does not exist" -ForegroundColor Yellow
                     }
+                    } '4' {
+                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    Write-Host "Press enter to cancel" -ForegroundColor Yellow
+                    $chooseVmOrDCToExportDisk = Read-Host "Enter Virtual Machine to export"
+                    $pathForExportedVMOrDC = Read-Host "Where do you want to place the exported files?"
+                    if(Get-VM -Name $chooseVmOrDCToExportDisk) {
+                        New-PCDCFunctionExportVM
+                        } 
+                        else {
+                        Write-Host "Virtual Machine [$chooseVmOrDCToExportDisk] does not exist" -ForegroundColor Yellow
+                        Write-Host "Try Again!" -BackgroundColor Yellow
+                        }
                     }
                 }
                 pause  
