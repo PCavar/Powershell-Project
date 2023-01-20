@@ -1,6 +1,6 @@
 ##NOTE, if somethings bugging and you dont know why, remove the this variable
 ##for trubleshooting! Thanks :)
-<#$ErrorActionPreference = 'SilentlyContinue' #>
+$ErrorActionPreference = 'SilentlyContinue'
 
 $VMPath = "C:\VM-Sysprep"
 $ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
@@ -193,20 +193,9 @@ function New-PCDCOnlyInstallADDS {
             Write-Host "Computer restarted and configuration successfully applied!" -ForegroundColor Yellow
 
         } else {  
-            Write-Verbose "Mstile.se already exists!"
+            Write-Verbose "$env:USERDOMAIN already exist!"
             }
         }
-}
-
-function New-PCConfigureDHCP {
-    Invoke-Command -VMName $vmName -Credential (Get-Credential) {
-        Install-WindowsFeature -Name 'DHCP' -IncludeManagementTools
-        Start-Sleep -Seconds 60
-        Add-DhcpServerv4Scope -Name $Using:NameOfDCHPScope -StartRange $Using:startOfDCHPScope -EndRange $Using:endOfDHCPScope -SubnetMask $Using:subnetmaskDCHPScope -State Active
-        Set-DhcpServerV4OptionValue -DnsServer $Using:setDNSDHCP -Router $Using:routerDHCP
-        Set-DhcpServerv4Scope -ScopeId $Using:enterDHCPScopeId -LeaseDuration $Using:leaseDurationDHCP
-        Restart-Service dhcpserver -Force
-    }   
 }
 function New-AddDCToExistingDomain {
 Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
@@ -242,17 +231,10 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
     -Force:$true
 }
 }
-
-function New-ExampleOfIpDnsRouterConf {
-    Write-Host "Example of a configuration"
-    Write-Host "IPAddress Value: 192.168.10.2"
-    Write-Host "DefaultGateway Value: 192.168.10.1"
-    Write-Host "PrefixLength/Subnet Value: 24"
-    Write-Host "DNS ServerClient Value: 192.168.10.2"
-}
 function New-AddVMToDomain {
     Invoke-Command -VMName $addComputerVMToDomain -Credential $addComputerVMToDomain\Administrator -ScriptBlock {
         Rename-Computer -NewName $Using:addComputerVMToDomain -Force
+        Set-DnsClientServerAddress -InterfaceIndex Get-NetAdapter.InterfaceIndex -ServerAddresses $Using:EnterDNSToAddVMtoDomain -Verbose
         Start-Sleep -Seconds 2
 
         Write-Host "Please enter credentials for DomainName\Administrator" -ForegroundColor Yellow
@@ -325,6 +307,9 @@ function New-DHCPConfigurationInstallment {
     Set-DhcpServerv4Scope `
     -ScopeId $Using:ScopeIdDHCP `
     -LeaseDuration 1.00:00:00
+
+    Write-Host "DHCP Configured Successfully" -ForegroundColor Yellow
+    Get-DhcpServerv4Scope -ScopeId $Using:ScopeIdDHCP
     }
 }
 function New-PCDCFunctionExportVM {
@@ -557,6 +542,7 @@ do {
                     $addComputerVMToDomain = Read-Host "Enter VM to ad to domain"
                     if(Get-VM -Name $addComputerVMToDomain) {
                     $domainNameToJoin = Read-Host "Enter Domainname ex. 'mstile.se'"
+                    $EnterDNSToAddVMtoDomain = Read-Host "Please enter DNS"
                     Write-Host "NOTE, before joining a domain you are required to Configure the DNS residing for that domain." -ForegroundColor Yellow
                     New-AddVMToDomain
                     } 
