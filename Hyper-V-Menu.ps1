@@ -1,3 +1,62 @@
+#This disables the Firewall
+function New-disableNetFirewall {
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+        Write-Host "Shutting down firewall, please hold..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 3
+        Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled False
+        Write-Host "Complete!" -ForegroundColor Yellow
+    }
+}
+
+#This function adds required stuff and installs the prerequisits for exchange
+function New-PerformSomeDvdVHDXStuffOnExchange {
+
+    $validatePrerequisitsForDvdIso = Get-VMDvdDrive -VMName $VMName | Select-Object -ExpandProperty dvdmediatype
+
+    if($validatePrerequisitsForDvdIso -eq "ISO") {
+        Write-Host "ISO-File aleady exists in $VMName" -ForegroundColor Yellow
+    } else {
+    #Add a dvdDrive for the Exchange-Iso and set the location to the Virtual Machine
+    Add-VMDvdDrive -VMName $VMName
+    Set-VMDvdDrive -VMName $VMName -Path "C:\VM-Sysprep\ExchangeServer\ExchangeServer2019-x64-CU12.ISO"
+    Write-Host "Adding DVD-Drive Containing Exchange-ISO.." -ForegroundColor Yellow
+    Start-Sleep -Seconds 1
+    }
+
+    $validatePrerequisitsVHDXExhange = Get-VMHardDiskDrive -VMName $VMName | Select-Object -ExpandProperty Path
+
+    if($validatePrerequisitsVHDXExhange -eq "C:\VM-Sysprep\EX01\$VMName.Exchange.vhdx") {
+        Write-Host "$VMName already has a VHDX at C:\VM-Sysprep\EX01\$VMName.Exchange.vhdx" -ForegroundColor Yellow
+    } else {
+        #Add a new VHDX to the Exchange Server and set the size to 100GB
+        New-VHD -Path "C:\VM-Sysprep\EX01\$VMName.Exchange.vhdx" -SizeBytes 100GB -Dynamic
+        Add-VMHardDiskDrive -VMName $VMName -Path "C:\VM-Sysprep\EX01\$VMName.Exchange.vhdx"
+        Write-Host "Adding VHDX to $VMName...." -ForegroundColor Yellow
+        Start-Sleep -Seconds 1
+    }
+
+   #This command copies all files contained in a folder, I have all required files in this folder
+   $Items = Get-ChildItem -Path "C:\ExchangeFolder"
+    foreach($item in $Items) {
+        Copy-VMFile "EX01" -SourcePath "C:\ExchangeFolder\$($item.name)" -DestinationPath "C:\ExchangeFolder\$($item.name)" -CreateFullPath -FileSource Host
+    }
+
+   Write-Host "Copying files needed for Exchange..." -ForegroundColor Yellow
+   Start-Sleep -Seconds 1
+   Write-Host "Files successfully copied, Location: C:\ExchangeFolder in Virtual Machine $VMName" -ForegroundColor Yellow
+
+   Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+    $OfflineDisk = Get-Disk | Where-Object {$_.OperationalStatus -like "offline"}
+    Set-Disk -Number $OfflineDisk.Number -IsOffline $false
+    Set-Disk -Number $OfflineDisk.Number -IsReadOnly $false
+    Initialize-Disk -Number $OfflineDisk.Number
+    #Clear-Disk -Number $OfflineDisk.Number -RemoveData
+    new-partition -DiskNumber $OfflineDisk.Number -DriveLetter F -UseMaximumSize
+    format-volume -DriveLetter F -FileSystem NTFS -NewFileSystemLabel EXDATA
+   }
+}
+
+
 ##NOTE, if somethings bugging and you dont know why, remove the this variable
 ##for trubleshooting! Thanks :)
 $ErrorActionPreference = 'SilentlyContinue'
@@ -232,7 +291,7 @@ Invoke-Command -VMName $VMName -Credential $VMName\Administrator -ScriptBlock {
 }
 }
 function New-AddVMToDomain {
-    Invoke-Command -VMName $addComputerVMToDomain -Credential $addComputerVMToDomain\Administrator -ScriptBlock {
+    Invoke-Command -VMName $addComputerVMToDomain -Credential (Get-Credential) -ScriptBlock {
         Rename-Computer -NewName $Using:addComputerVMToDomain -Force
         Set-DnsClientServerAddress -InterfaceIndex Get-NetAdapter.InterfaceIndex -ServerAddresses $Using:EnterDNSToAddVMtoDomain -Verbose
         Start-Sleep -Seconds 2
@@ -335,6 +394,7 @@ function New-DCMENU
     Write-Host "3: Turnoff a VM"
     Write-Host "4: Remove a VM"
     Write-Host "5: Provision a new VM"
+    Write-Host "6: Choose Server for Exchange Installation"
 }
 function New-ProvisioningDCVM
  { 
@@ -358,6 +418,7 @@ function New-ProvisioningDCVM
     Write-Host "2: Add Roles and Features for a server"
     Write-Host "3: Join a existing Domain"
     Write-Host "4: Export a VM to choosen folder"
+    Write-Host "5: Shutdown Firewall (Not recommended)"
  }
  function New-DCConfigurationsSubMenu
  { 
@@ -384,11 +445,24 @@ function New-ProvisioningDCVM
     Write-Host "1: Choose a VM to enter a Remote PSSession"
  }
 
+
+ function New-ExchangeInstallationMenu {
+    param (
+        [string]$ExchangeMenuLOL = 'Installation for Exchange Server'
+    )
+    Clear-Host
+    Write-Host "================ $ExchangeMenuLOL ================"
+    Write-Host "1: Join choosen domain"
+    Write-Host "2: Disable firewall"
+    Write-Host "3: Add Requirements Pre-Install Exchange"
+}
+
 do {
     Write-Host "================ Main Menu ==============="
     Write-Host "1: Provision/Manage Virtual Machines"
     Write-Host "2: Configure Domain Services"
     Write-Host "3: Enter Remote Powershell Session"
+    Write-Host "4: Install Exchange On Server"
     Write-Host "Q: Press Q to exit."
 
     $MainMenu = Read-Host "Choose an entrance Or press Q to quit"
@@ -398,6 +472,7 @@ do {
                 $DCMainMenu = Read-Host "Choose an entrance or Press B for Back"
                 switch ($DCMainMenu) {
                     '1' {
+                        New-Testing
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                      } '2' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
@@ -433,7 +508,8 @@ do {
                                 if(Get-VM -Name $VMName) {
                                     Write-Host "Virtual Machine with name $VMName already exists!"
                                 } else {
-                                    New-PCVM -VMName $VMName -MachineType Client                                }
+                                    New-PCVM -VMName $VMName -MachineType Client
+                                }
                                 }
                             }
                             pause
@@ -561,6 +637,11 @@ do {
                         Write-Host "Virtual Machine [$chooseVmOrDCToExportDisk] does not exist" -ForegroundColor Yellow
                         Write-Host "Try Again!" -BackgroundColor Yellow
                         }
+                    } '5' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "Press enter to cancel" -ForegroundColor Yellow
+                        $VMName = Read-Host "Enter VM you wish to disable Firewall on" -ForegroundColor Yellow
+                        New-disableNetFirewall
                     }
                 }
                 pause  
@@ -581,6 +662,49 @@ do {
                 }
                 pause
         } until ($enterPSSessionVM -eq 'B')
+        } '4' {
+            do {
+                New-ExchangeInstallationMenu
+                $ExchangeMenuLOL = Read-Host "Choose an entrance or Press B for Back"
+                switch($ExchangeMenuLOL){
+                '1' {
+                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                    $addComputerVMToDomain = Read-Host "Enter Server to join Domain"
+                if(Get-VM -Name $addComputerVMToDomain) {
+                    Write-Host "This will first disable the Firewall and join the chosen Domain" -ForegroundColor Yellow
+                    $domainNameToJoin = Read-Host "Enter Domainname ex. 'mstile.se'"
+                    $EnterDNSToAddVMtoDomain = Read-Host "Please enter DNS"
+                    Write-Host "NOTE, before joining a domain you are required to Configure the DNS residing for that domain." -ForegroundColor Yellow
+                    New-AddVMToDomain
+                    } else { 
+                    Write-Host "Virtual Machine $addComputerVMToDomain does not exist" -ForegroundColor Yellow
+                        }
+                    } '2' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        $VMName = Read-Host "Enter Server to Disable Firewall"
+                        if(Get-VM -Name $VMName) {
+                            Write-Host "This will Disable the firewall" -ForegroundColor Yellow
+                            Start-Sleep -Seconds 5
+                            New-disableNetFirewall
+                        } else { 
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                            }
+                    } '3' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "This will do the following:" -ForegroundColor Yellow
+                        Write-Host "Add a dvdDrive for the Exchange-Iso and set the location to the Virtual Machine" -ForegroundColor Yellow
+                        Write-Host "Add a new VHDX to the Exchange Server and set the size to 100GB" -ForegroundColor Yellow
+                        Write-Host "Copy all files needed for a Exchange Installation from a choosen folder" -ForegroundColor Yellow
+                        $VMName = Read-Host "Enter Server to Perform theese actions"
+                        if(Get-VM -Name $VMName) {
+                            Write-Host "Working on it, please wait..." -ForegroundColor Yellow
+                            New-PerformSomeDvdVHDXStuffOnExchange
+                        } else {
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow                        }
+                    }
+                }
+                Pause
+            } until ($ExchangeMenuLOL -eq 'B')
         }
     }
 } until($MainMenu -eq 'Q')
