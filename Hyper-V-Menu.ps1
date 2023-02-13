@@ -25,37 +25,143 @@ function New-PerformSomeDvdVHDXStuffOnExchange {
 
     $validatePrerequisitsVHDXExhange = Get-VMHardDiskDrive -VMName $VMName | Select-Object -ExpandProperty Path
 
-    if($validatePrerequisitsVHDXExhange -eq "C:\VM-Sysprep\EX01\$VMName.Exchange.vhdx") {
-        Write-Host "$VMName already has a VHDX at C:\VM-Sysprep\EX01\$VMName.Exchange.vhdx" -ForegroundColor Yellow
+    if($validatePrerequisitsVHDXExhange -eq "C:\VM-Sysprep\$VMName\$VMName.Exchange.vhdx") {
+        Write-Host "$VMName already has a VHDX at C:\VM-Sysprep\$VMName\$VMName.Exchange.vhdx" -ForegroundColor Yellow
     } else {
         #Add a new VHDX to the Exchange Server and set the size to 100GB
-        New-VHD -Path "C:\VM-Sysprep\EX01\$VMName.Exchange.vhdx" -SizeBytes 100GB -Dynamic
-        Add-VMHardDiskDrive -VMName $VMName -Path "C:\VM-Sysprep\EX01\$VMName.Exchange.vhdx"
+        New-VHD -Path "C:\VM-Sysprep\$VMName\$VMName.Exchange.vhdx" -SizeBytes 100GB -Dynamic
+        Add-VMHardDiskDrive -VMName $VMName -Path "C:\VM-Sysprep\$VMName\$VMName.Exchange.vhdx"
         Write-Host "Adding VHDX to $VMName...." -ForegroundColor Yellow
         Start-Sleep -Seconds 1
+        Write-Host "Please enter credentials so we can Initialize the DISK"
+    }
+
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+        #Find disk which is offline 
+        $DiskToInitialize = Get-Disk | Where-Object {$_.OperationalStatus -like "offline"}
+        Set-Disk -Number $DiskToInitialize.Number -IsOffline $false
+        Set-Disk -Number $DiskToInitialize.Number -IsReadOnly $false
+        #Initialize disk with a new Partition,Drive-Letter and format it
+        Initialize-Disk -Number $DiskToInitialize.Number
+        New-Partition -DiskNumber $DiskToInitialize.Number -DriveLetter F -UseMaximumSize
+        Format-Volume -DriveLetter F -FileSystem NTFS -NewFileSystemLabel EXDATA -Force
+        
+        Write-Host "Disk setting up..." -ForegroundColor Yellow
+
+        Write-Host "Disk setup Complete!" -ForegroundColor Yellow
+        Write-Host "Name: EXDATA" -ForegroundColor Yellow
+        Write-Host "Drive: F" -ForegroundColor Yellow
     }
 
    #This command copies all files contained in a folder, I have all required files in this folder
    $Items = Get-ChildItem -Path "C:\ExchangeFolder"
     foreach($item in $Items) {
-        Copy-VMFile "EX01" -SourcePath "C:\ExchangeFolder\$($item.name)" -DestinationPath "C:\ExchangeFolder\$($item.name)" -CreateFullPath -FileSource Host
+        Copy-VMFile "$VMName" -SourcePath "C:\ExchangeFolder\$($item.name)" -DestinationPath "C:\ExchangeFolder\$($item.name)" -CreateFullPath -FileSource Host -Force
     }
 
    Write-Host "Copying files needed for Exchange..." -ForegroundColor Yellow
    Start-Sleep -Seconds 1
    Write-Host "Files successfully copied, Location: C:\ExchangeFolder in Virtual Machine $VMName" -ForegroundColor Yellow
-
-   Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
-    $OfflineDisk = Get-Disk | Where-Object {$_.OperationalStatus -like "offline"}
-    Set-Disk -Number $OfflineDisk.Number -IsOffline $false
-    Set-Disk -Number $OfflineDisk.Number -IsReadOnly $false
-    Initialize-Disk -Number $OfflineDisk.Number
-    #Clear-Disk -Number $OfflineDisk.Number -RemoveData
-    new-partition -DiskNumber $OfflineDisk.Number -DriveLetter F -UseMaximumSize
-    format-volume -DriveLetter F -FileSystem NTFS -NewFileSystemLabel EXDATA
-   }
 }
 
+function New-InstallRequiredPreRequisitsExchange {
+
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+
+        Write-Host "Installing Roles and features required for Exchange Server, please wait..." -ForegroundColor Yellow
+
+        ###Install Required Windowsfeatures###
+       Install-WindowsFeature NET-Framework-45-Features, Server-Media-Foundation,
+       RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface,
+       RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, WAS-Process-Model,
+       Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth,
+       Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging,
+       Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter,
+       Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service,
+       Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression,
+       Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation, RSAT-ADDS
+
+       Start-Sleep -Seconds 2
+
+       Write-Host "Done.." -ForegroundColor Yellow
+
+       Restart-Computer -Force
+
+       <#Here do EXECUTABLES AND MSI - THEN RESTART
+       Set-Location -Path "C:\ExchangeFolder"
+       .\UcmaRuntimeSetup.exe /Q
+       .\vcredist_x64.exe /Q
+       .\rewrite_amd64_en-US.msi
+       .\ndp48-x86-x64-allos-enu.exe /Q
+
+       Write-Host "Files successfully run" -ForegroundColor Yellow
+       Write-Host "UcmaRuntimeSetup" -ForegroundColor
+       Write-Host "vcredist_x64" -ForegroundColor Yellow
+       Write-Host "rewrite_amd64_en-U" -ForegroundColor Yellow
+       Write-Host "ndp48-x86-x64-allos-enu" -ForegroundColor Yellow
+
+       Write-Host "Restarting Computer" -ForegroundColor Yellow
+
+       Restart-Computer -Force #>
+    }
+}
+
+function New-TestingLoopsForExeMSI {
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+           #Here do EXECUTABLES AND MSI - THEN RESTART
+            Set-Location -Path "C:\ExchangeFolder"
+            .\UcmaRuntimeSetup.exe /q
+            Write-Host "UcmaRuntimeSetup.exe Installed" -ForegroundColor Yellow
+            .\vcredist_x64.exe /q
+            Write-Host "vcredist_x64.exe Installed" -ForegroundColor Yellow
+            .\rewrite_amd64_en-US.msi /q
+            Write-Host "rewrite_amd64_en-US.msi Installed" -ForegroundColor Yellow
+            .\ndp48-x86-x64-allos-enu.exe /q
+            Write-Host "ndp48-x86-x64-allos-enu.exe Installed" -ForegroundColor Yellow
+
+            Restart-Computer -Force
+    }
+}
+
+function New-ExtendeADSchemaExchange {
+
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+
+    #Set the Drive & Extend AD Schema
+    $DVDDriveIsoExchange = Get-WmiObject win32_volume | Where-Object {$_.drivetype -eq '5'}
+    Set-Location $DVDDriveIsoExchange.name
+
+    .\Setup.exe /IAcceptExchangeServerLicenseTerms_DiagnosticDataON /PrepareSchema
+    .\Setup.exe /IAcceptExchangeServerLicenseTerms_DiagnosticDataON /PrepareAD /OrganizationName:"Mstile"
+
+    Restart-Computer -Force
+
+    }
+}
+
+function New-SecondInstallationExchangeServer {
+    
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+     
+     #Install Exchange
+
+         #Set the Drive & Install Exchange
+         $DVDDriveIsoExchange = Get-WmiObject win32_volume | Where-Object {$_.drivetype -eq '5'}
+         Set-Location $DVDDriveIsoExchange.name
+ 
+      .\Setup.exe /m:install /roles:m /IAcceptExchangeServerLicenseTerms_DiagnosticDataON /InstallWindowsComponents `
+      /TargetDir:"F:\Program Files\Microsoft\Exchange Server\V15"  `
+      /LogFolderPath:"F:\Program Files\Microsoft\Exchange Server\V15\LOGS" `
+      /MdbName:"Mailbox Database 21121984" `
+      /DbFilePath: "F:\Program Files\Microsoft\Exchange Server\V15\Mailboxes\Mailbox Database 21121984.edb"
+
+      Restart-Computer -Force
+    }
+}
+
+function New-LoginToExchangeServerPowerShell {
+
+}
 
 ##NOTE, if somethings bugging and you dont know why, remove the this variable
 ##for trubleshooting! Thanks :)
@@ -394,7 +500,6 @@ function New-DCMENU
     Write-Host "3: Turnoff a VM"
     Write-Host "4: Remove a VM"
     Write-Host "5: Provision a new VM"
-    Write-Host "6: Choose Server for Exchange Installation"
 }
 function New-ProvisioningDCVM
  { 
@@ -454,7 +559,12 @@ function New-ProvisioningDCVM
     Write-Host "================ $ExchangeMenuLOL ================"
     Write-Host "1: Join choosen domain"
     Write-Host "2: Disable firewall"
-    Write-Host "3: Add Requirements Pre-Install Exchange"
+    Write-Host "3: Add Required Drives,ISO- and EXE/MSI files for Exchange"
+    Write-Host "4: Add Required Roles/Features for Exchange"
+    Write-Host "5: Run All Executables and MSI for Exchange Server"
+    Write-Host "6: Extend ADSchema Exchange Server"
+    Write-Host "7: Run second configuration for Installation Exchange Server"
+
 }
 
 do {
@@ -640,8 +750,12 @@ do {
                     } '5' {
                         Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
                         Write-Host "Press enter to cancel" -ForegroundColor Yellow
-                        $VMName = Read-Host "Enter VM you wish to disable Firewall on" -ForegroundColor Yellow
-                        New-disableNetFirewall
+                        $VMName = Read-Host "Enter VM you wish to disable Firewall on"
+                        if(Get-VM -Name $VMName) {
+                            New-disableNetFirewall
+                        } else {
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                        }
                     }
                 }
                 pause  
@@ -694,13 +808,51 @@ do {
                         Write-Host "This will do the following:" -ForegroundColor Yellow
                         Write-Host "Add a dvdDrive for the Exchange-Iso and set the location to the Virtual Machine" -ForegroundColor Yellow
                         Write-Host "Add a new VHDX to the Exchange Server and set the size to 100GB" -ForegroundColor Yellow
+                        Write-Host "Initialize the Disk (F: Drive and named EXDATA)" -ForegroundColor Yellow
                         Write-Host "Copy all files needed for a Exchange Installation from a choosen folder" -ForegroundColor Yellow
                         $VMName = Read-Host "Enter Server to Perform theese actions"
                         if(Get-VM -Name $VMName) {
                             Write-Host "Working on it, please wait..." -ForegroundColor Yellow
                             New-PerformSomeDvdVHDXStuffOnExchange
                         } else {
-                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow                        }
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow                        
+                        }
+                    } '4' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "This Option will install all required Roles/Feature for Exchange Server" -ForegroundColor Yellow
+                        $VMName = Read-Host "Enter Server to Perform these actions"
+                        if(Get-VM -Name $VMName) {
+                            New-InstallRequiredPreRequisitsExchange
+                        } else {
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow                        
+                        }
+                    } '5' {
+                        Get-VM | Select-Object Name,start,CPUUsage,Version | Format-Table
+                        Write-Host "Run all Executables and MSI in order for the Exchange Server"
+                        $VMName = Read-Host "Enter a server to perform these actions"
+                        if(Get-VM -Name $VMName) {
+                            New-TestingLoopsForExeMSI
+                        } else {
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                        }
+                    } '6' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "This will Extend the ADSchema and install Exchange"
+                        $VMName = Read-Host "Enter a server to perfom these actions"
+                        if(Get-VM -Name $VMName) {
+                            New-ExtendeADSchemaExchange
+                        } else {
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                        }
+                    } '7' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "This will make the last Installations processes for Exchange Server"
+                        $VMName = Read-Host "Enter a server to perfom these actions"
+                        if(Get-VM -Name $VMName) {
+                            New-SecondInstallationExchangeServer
+                        } else {
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                        }
                     }
                 }
                 Pause
