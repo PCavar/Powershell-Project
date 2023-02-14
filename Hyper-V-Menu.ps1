@@ -71,7 +71,7 @@ function New-InstallRequiredPreRequisitsExchange {
         Write-Host "Installing Roles and features required for Exchange Server, please wait..." -ForegroundColor Yellow
 
         ###Install Required Windowsfeatures###
-       Install-WindowsFeature NET-Framework-45-Features, Server-Media-Foundation,
+       Install-WindowsFeature -Name NET-Framework-45-Features, Server-Media-Foundation,
        RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface,
        RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, WAS-Process-Model,
        Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth,
@@ -116,7 +116,7 @@ function New-TestingLoopsForExeMSI {
             Write-Host "vcredist_x64.exe Installed" -ForegroundColor Yellow
             .\rewrite_amd64_en-US.msi /q
             Write-Host "rewrite_amd64_en-US.msi Installed" -ForegroundColor Yellow
-            .\ndp48-x86-x64-allos-enu.exe /q
+            .\ndp48-x86-x64-allos-enu.exe /q /norestart
             Write-Host "ndp48-x86-x64-allos-enu.exe Installed" -ForegroundColor Yellow
 
             Restart-Computer -Force
@@ -170,6 +170,7 @@ $ErrorActionPreference = 'SilentlyContinue'
 $VMPath = "C:\VM-Sysprep"
 $ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
 $ClientTemplatePath = "C:\VM-Sysprep\VM10\Virtual Hard Disks\VM10Template.vhdx"
+$CoreTemplatePath = "C:\VM-Sysprep\Win2019Core\Virtual Hard Disks\Win2019Core.vhdx"
 
 function New-PCVM {
 
@@ -179,14 +180,16 @@ param (
     [string]$VMName,
 
     [Parameter(Mandatory)]
-    [ValidateSet("Server","Client")]$MachineType
+    [ValidateSet("Server","Client","Core")]$MachineType
 )
     if((-not(Get-VM $VMName -ErrorAction SilentlyContinue).Name) -eq $VMName) {
 
         if ($MachineType -like "Server") {
             $TemplatePath = $ServerTemplatePath
-        } else {
+        } elseif ($MachineType -like "Client") {
             $TemplatePath = $ClientTemplatePath
+        } else {
+            $TemplatePath = $CoreTemplatePath
         }
 
     $VHDPath = "$VMPath\$VMName\$VMName.vhdx"
@@ -201,7 +204,7 @@ param (
         -BootDevice VHD `
         -Generation 2 `
         -Switch LAN     
-    } else {
+    } elseif ($MachineType -like "Client") {
         New-VM `
         -Name $VMName `
         -Path $VMPath `
@@ -210,6 +213,15 @@ param (
         -BootDevice VHD `
         -Generation 2 `
         -Switch LAN
+    } else {
+        New-VM `
+        -Name $VMName `
+        -Path $VMPath `
+        -MemoryStartupBytes 2GB `
+        -VHDPath $VHDPath `
+        -BootDevice VHD `
+        -Generation 2 `
+        -Switch LAN 
     }
     
 
@@ -511,6 +523,7 @@ function New-ProvisioningDCVM
      
      Write-Host "1: Provision a Windows Server"
      Write-Host "2: Provision a new Client VM"
+     Write-Host "3: Provision a new Server Core"
  }
  function NEW-DCConfigurationsMenu {
     param (
@@ -620,6 +633,14 @@ do {
                                 } else {
                                     New-PCVM -VMName $VMName -MachineType Client
                                 }
+                                } '3' {
+                                    Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                                    $VMName = Read-Host "Enter name of the Server-Core you want to provision"
+                                    if(Get-VM -Name $VMName) {
+                                        Write-Host "Virtual Machine with name $VMName already exists!"
+                                    } else {
+                                        New-PCVM -VMName $VMName -MachineType Core
+                                    }
                                 }
                             }
                             pause
