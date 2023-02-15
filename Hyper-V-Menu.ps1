@@ -242,7 +242,7 @@ function New-CreateADUsersFromCSVExample {
 
 ##NOTE, if somethings bugging and you dont know why, remove the this variable
 ##for trubleshooting! Thanks :) 
-<#$ErrorActionPreference = 'SilentlyContinue'#>
+$ErrorActionPreference = 'SilentlyContinue'
 
 $VMPath = "C:\VM-Sysprep"
 $ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
