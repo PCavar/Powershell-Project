@@ -24,9 +24,9 @@ To be clear, you will also need ISO files for the OS Windows Server/Windows 10 P
 
 
 I have added Exchange installation: 
-1 Prerequisits with roles/features 
-2 Executables required, MSI
-3 Prepare AD / Schema Extension and much more.
+1. Prerequisits with roles/features 
+2. Executables required, MSI
+3. Prepare AD / Schema Extension and much more.
 
 Required for this is ISO-Exchange (https://www.microsoft.com/en-us/download/details.aspx?id=104131)
 UCMARuntimeSetup (https://www.microsoft.com/en-us/download/details.aspx?id=34992)
@@ -35,8 +35,8 @@ rewrite_amd64_en-US (https://www.iis.net/downloads/microsoft/url-rewrite)
 ndp48-x86-x64-allos-enu (https://support.microsoft.com/en-us/topic/microsoft-net-framework-4-8-offline-installer-for-windows-9d23f658-3b97-68ab-d013-aa3c3e7495e0)
 
 Requirements are basic knowledge of windows server and Active Directory.
-Now what steps to do when. These steps need to be done in order. Have fun!
+Know what steps to do when. These steps need to be done in order. Have fun!
 
-I am will continue push for commits and expand the functionality while keeping it 100% powershell based. Thanks!
+I will continue push for commits and expand the functionality while keeping it 100% powershell based. Thanks!
 
 Have fun!

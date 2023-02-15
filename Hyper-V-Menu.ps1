@@ -86,23 +86,6 @@ function New-InstallRequiredPreRequisitsExchange {
        Write-Host "Done.." -ForegroundColor Yellow
 
        Restart-Computer -Force
-
-       <#Here do EXECUTABLES AND MSI - THEN RESTART
-       Set-Location -Path "C:\ExchangeFolder"
-       .\UcmaRuntimeSetup.exe /Q
-       .\vcredist_x64.exe /Q
-       .\rewrite_amd64_en-US.msi
-       .\ndp48-x86-x64-allos-enu.exe /Q
-
-       Write-Host "Files successfully run" -ForegroundColor Yellow
-       Write-Host "UcmaRuntimeSetup" -ForegroundColor
-       Write-Host "vcredist_x64" -ForegroundColor Yellow
-       Write-Host "rewrite_amd64_en-U" -ForegroundColor Yellow
-       Write-Host "ndp48-x86-x64-allos-enu" -ForegroundColor Yellow
-
-       Write-Host "Restarting Computer" -ForegroundColor Yellow
-
-       Restart-Computer -Force #>
     }
 }
 
@@ -119,7 +102,7 @@ function New-TestingLoopsForExeMSI {
             .\ndp48-x86-x64-allos-enu.exe /q /norestart
             Write-Host "ndp48-x86-x64-allos-enu.exe Installed" -ForegroundColor Yellow
 
-            Restart-Computer -Force
+            Write-Host "Computer will restart..." -ForegroundColor Yellow
     }
 }
 
@@ -163,9 +146,103 @@ function New-LoginToExchangeServerPowerShell {
 
 }
 
+function New-CreateNewADOrganizationalUnitInAD {
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+
+    New-ADOrganizationalUnit `
+     -Name $Using:NameOfOuInAD `
+     -Path "DC=$Using:PathNETBIOSForTheOu,DC=$Using:PathForTheOUEnding" `
+     -ProtectedFromAccidentalDeletion $False
+
+    Write-Host "Organizational Group created named $Using:NameOfOuInAD" -ForegroundColor Yellow
+    }
+}
+
+function New-CreateNewGroupInAD {
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+
+    New-ADGroup `
+    -Name $Using:EnterADGroupName `
+    -SamAccountName RODCAdmins `
+    -GroupCategory Security `
+    -GroupScope Global `
+    -Path "OU=$Using:EnterPathForTheADgroupOU,DC=$Using:EnterPathForTheADgroupDCOne,DC=$Using:EnterPathForTheADgroupDCTwo"
+
+    Write-Host "AD-Group created named $Using:EnterADGroupName" -ForegroundColor Yellow
+    Write-Host "Path 'OU='$Using:EnterPathForTheADgroupOU 'DC='$Using:EnterPathForTheADgroupDCOne 'DC='$Using:EnterPathForTheADgroupDCTwo" -ForegroundColor Yellow
+    }
+}
+
+function New-CreateOwnADUsersInAD {
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+
+        $fullName = $Using:firstNameUser + " " + $Using:surNameUser
+        $SAM = $Using:firstNameUser + " "." " + $Using:surNameUser
+        $userprincipalname = $Using:firstNameUser+"."+""+$Using:surNameUser + $Using:UPNadUser
+        $passWordForADUsers = "Vinter2020"
+
+        New-ADUser `
+        -Name $fullName `
+        -SamAccountName $SAM `
+        -UserPrincipalName $userprincipalname `
+        -GivenName $Using:firstNameUser `
+        -Surname $Using:surNameUser `
+        -DisplayName $fullName `
+        -AccountPassword (ConvertTo-SecureString $passWordForADUsers -AsPlainText -Force) `
+        -Enabled $true 
+
+        Write-Host "User created" -ForegroundColor Yellow
+        Write-Host "$userprincipalname"
+    }
+}
+
+
+function New-CreateADUsersFromCSVExample {
+
+    #Import csv-file to AD and store it in a variable $using:
+    $csvFileADUsers = "C:\FolderCSVFileUsers\usersExchange.csv"
+    Copy-VMFile "$VMName" -SourcePath "$csvFileADUsers" -DestinationPath "$csvFileADUsers" -CreateFullPath -FileSource Host -Force
+    Write-Host "Importing CSV-File to $VMName" -ForegroundColor Yellow
+
+    Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
+
+
+        $ADUsersImport = Import-Csv -Path "C:\FolderCSVFileUsers\usersExchange.csv"
+        $password = "Vinter2020"
+
+        Write-Host "Creating and adding Users to Organizational Unit $Using:EnterPathForTheADUserOU and Security-Group $Using:EnterGroupWithinOUToAddUsers" -ForegroundColor Yellow
+ 
+    foreach ($users in $ADUsersImport) {
+
+        $userName = $users.givenname
+        $lastName = $users.surname
+        $SAM = $users.SAMaccountname
+        $userprincipalname = $users.SAMaccountname + "@" + $Using:EnterPathForTheADUserDCOne + "." + $Using:EnterPathForTheADUserDCTwo
+        $fullName = $userName + " " + $lastName
+
+    #takes the output from the foreachloop and creates all the users
+    New-ADUser `
+        -Name $fullName `
+        -SamAccountName $SAM `
+        -UserPrincipalName $userprincipalname `
+        -GivenName $userName `
+        -Surname $lastName `
+        -DisplayName $fullName `
+        -AccountPassword (ConvertTo-SecureString $password -AsPlainText -Force) `
+        -Enabled $true `
+        -Path "OU=$Using:EnterPathForTheADUserOU,DC=$Using:EnterPathForTheADUserDCOne,DC=$Using:EnterPathForTheADUserDCTwo"
+        
+        #Adds users to the chosen group
+        Add-ADGroupMember -Identity "CN=$Using:EnterGroupWithinOUToAddUsers,OU=$Using:EnterPathForTheADUserOU,DC=$Using:EnterPathForTheADUserDCOne,DC=$Using:EnterPathForTheADUserDCTwo" -Members $SAM
+        Write-Host "$userprincipalname"
+
+        }
+    }
+}
+
 ##NOTE, if somethings bugging and you dont know why, remove the this variable
-##for trubleshooting! Thanks :)
-$ErrorActionPreference = 'SilentlyContinue'
+##for trubleshooting! Thanks :) 
+<#$ErrorActionPreference = 'SilentlyContinue'#>
 
 $VMPath = "C:\VM-Sysprep"
 $ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
@@ -513,6 +590,7 @@ function New-DCMENU
     Write-Host "4: Remove a VM"
     Write-Host "5: Provision a new VM"
 }
+
 function New-ProvisioningDCVM
  { 
      param (
@@ -577,7 +655,19 @@ function New-ProvisioningDCVM
     Write-Host "5: Run All Executables and MSI for Exchange Server"
     Write-Host "6: Extend ADSchema Exchange Server"
     Write-Host "7: Run second configuration for Installation Exchange Server"
+}
 
+function New-ManageOUGroupsUsersInAD {
+    param (
+        [string]$MenuForManagingOUsAndUsers = 'Manage your workforce here'
+    )
+    Clear-Host
+    Write-Host "================ $MenuForManagingOUsAndUsers ================"
+    Write-Host "1: Create OUs in AD"
+    Write-Host "2: Create Groups in AD"
+    Write-Host "3: Create own users in AD"
+    Write-Host "4: Use attached CSV-File to create random users"
+    Write-Host "5: Coming Soon"
 }
 
 do {
@@ -586,6 +676,7 @@ do {
     Write-Host "2: Configure Domain Services"
     Write-Host "3: Enter Remote Powershell Session"
     Write-Host "4: Install Exchange On Server"
+    Write-Host "5: Create and manage OUs, ADGroups & Users"
     Write-Host "Q: Press Q to exit."
 
     $MainMenu = Read-Host "Choose an entrance Or press Q to quit"
@@ -874,10 +965,71 @@ do {
                         } else {
                             Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
                         }
-                    }
+                    } 
                 }
                 Pause
             } until ($ExchangeMenuLOL -eq 'B')
+        } '5' {
+            do {
+                New-ManageOUGroupsUsersInAD
+                $enterOuChoice = Read-Host "Choose an entrance or Press B for Back"
+                switch($enterOuChoice) {
+                    '1' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "Press Enter to cancel" -ForegroundColor Yellow
+                        $VMName = Read-Host "Enter Server to add OU"
+                        $NameOfOuInAD = Read-Host "Enter name of Organizational Unit"
+                        $PathNETBIOSForTheOu = Read-Host "Enter NETBIOS name for the Domain"
+                        $PathForTheOUEnding = Read-Host "Enter the TLD (Top Level Domain) (Examples SE or COM)"
+                        if(Get-VM -Name $VMName) {
+                            New-CreateNewADOrganizationalUnitInAD
+                        } else {
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                        }
+                    } '2' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "Press Enter to cancel" -ForegroundColor Yellow
+                        $VMName = Read-Host "Enter Server to add AD-Group"
+                        $EnterADGroupName = Read-Host "Enter AD-Group name"
+                        Write-Host "Entering a path-example for the group looks like this" -ForegroundColor Yellow
+                        Write-Host "Structure is as followed 'OU=Choose OU',DC=NETBIOS ,DC=TLD" -ForegroundColor Yellow
+                        $EnterPathForTheADgroupOU = Read-Host "Enter OU"
+                        $EnterPathForTheADgroupDCOne = Read-Host "Enter NETBIOS"
+                        $EnterPathForTheADgroupDCTwo = Read-Host "Enter TLD"
+                        if(Get-VM -Name $VMName) {
+                            New-CreateNewGroupInAD
+                        } else {
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                        }
+                    } '3' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "Press Enter to cancel" -ForegroundColor Yellow
+                        $VMName = Read-Host "Enter Server to add AD-User"
+                        $firstNameUser = Read-Host "Enter Firstname"
+                        $surNameUser = Read-Host "Enter Surname"
+                        $UPNadUser = Read-Host "Enter UPN-Suffix (@example.com)"
+                        if(Get-VM -Name $VMName) {
+                        New-CreateOwnADUsersInAD
+                        } else {
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                        }
+                    } '4' {
+                        Get-VM | Select-Object Name,State,CPUUsage,Version | Format-Table
+                        Write-Host "Press Enter to cancel" -ForegroundColor Yellow
+                        $VMName = Read-Host "Enter Server to add AD-Users"
+                        $EnterPathForTheADUserOU = Read-Host "Enter Organizational Unit"
+                        $EnterPathForTheADUserDCOne = Read-Host "Enter NETBIOS"
+                        $EnterPathForTheADUserDCTwo = Read-Host "Enter TLD"
+                        $EnterGroupWithinOUToAddUsers = Read-Host "Enter Security Group (CN) within your OU to add Users"
+                        if(Get-VM -Name $VMName) {
+                        New-CreateADUsersFromCSVExample
+                        } else {
+                            Write-Host "Virtual Machine $VMName does not exist" -ForegroundColor Yellow
+                        }
+                    }
+                }
+                pause
+            } until ($enterOuChoice -eq 'B')
         }
     }
 } until($MainMenu -eq 'Q')
