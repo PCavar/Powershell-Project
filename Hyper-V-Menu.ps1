@@ -111,8 +111,8 @@ function New-ExtendeADSchemaExchange {
     Invoke-Command -VMName $VMName -Credential (Get-Credential) -ScriptBlock {
 
     #Set the Drive & Extend AD Schema
-    $DVDDriveIsoExchange = Get-WmiObject win32_volume | Where-Object {$_.drivetype -eq '5'}
-    Set-Location $DVDDriveIsoExchange.name
+    $DVDDriveExchange = Get-WmiObject win32_volume | Where-Object {$_.drivetype -eq '5'}
+    Set-Location $DVDDriveExchange.name
 
     .\Setup.exe /IAcceptExchangeServerLicenseTerms_DiagnosticDataON /PrepareSchema
     .\Setup.exe /IAcceptExchangeServerLicenseTerms_DiagnosticDataON /PrepareAD /OrganizationName:"Mstile"
@@ -129,8 +129,8 @@ function New-SecondInstallationExchangeServer {
      #Install Exchange
 
          #Set the Drive & Install Exchange
-         $DVDDriveIsoExchange = Get-WmiObject win32_volume | Where-Object {$_.drivetype -eq '5'}
-         Set-Location $DVDDriveIsoExchange.name
+         $DVDDriveExchange = Get-WmiObject win32_volume | Where-Object {$_.drivetype -eq '5'}
+         Set-Location $DVDDriveExchange.name
  
       .\Setup.exe /m:install /roles:m /IAcceptExchangeServerLicenseTerms_DiagnosticDataON /InstallWindowsComponents `
       /TargetDir:"F:\Program Files\Microsoft\Exchange Server\V15"  `
@@ -242,7 +242,7 @@ function New-CreateADUsersFromCSVExample {
 
 ##NOTE, if somethings bugging and you dont know why, remove the this variable
 ##for trubleshooting! Thanks :) 
-$ErrorActionPreference = 'SilentlyContinue'
+
 
 $VMPath = "C:\VM-Sysprep"
 $ServerTemplatePath = "C:\VM-Sysprep\Win2019\Virtual Hard Disks\Win2019Template.vhdx"
@@ -640,7 +640,6 @@ function New-ProvisioningDCVM
     Write-Host "================ $MenuTitleForEnteringSession ================"
     Write-Host "1: Choose a VM to enter a Remote PSSession"
  }
-
 
  function New-ExchangeInstallationMenu {
     param (
